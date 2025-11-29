@@ -135,6 +135,185 @@ Example format: ["Subtask 1", "Subtask 2", "Subtask 3", "Subtask 4", "Subtask 5"
 }
 
 /**
+ * Analyze a photo/image and extract tasks using OpenAI Vision API
+ */
+export interface DetectedTask {
+  title: string
+  description?: string
+  location?: string
+  time?: string
+  due_date?: string
+  type: 'main' | 'subtask'
+  subtasks?: DetectedSubtask[]
+  suggested_tags?: string[]
+  priority?: 'high' | 'medium' | 'low'
+}
+
+export interface DetectedSubtask {
+  title: string
+  notes?: string
+}
+
+export interface PhotoAnalysisResult {
+  tasks: DetectedTask[]
+}
+
+/**
+ * Analyze photo and extract tasks using GPT-4 Vision
+ */
+export async function analyzePhotoForTasks(
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg'
+): Promise<PhotoAnalysisResult> {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OpenAI API key is not configured')
+  }
+
+  const currentDateTime = getCurrentDateTime()
+
+  const prompt = `Analyze this photo of a to-do list, notes, whiteboard, or task list. Extract all tasks and subtasks with their details.
+
+Current date: ${currentDateTime.date}
+Current day: ${currentDateTime.dayOfWeek}
+Current time: ${currentDateTime.time}
+
+Extract and identify:
+1. Task titles (main tasks and subtasks)
+2. Task descriptions/notes (any additional details written for each task)
+3. Location information (if mentioned: "at grocery store", "office", "home", etc.)
+4. Time information (if mentioned: "3pm", "morning", "after lunch", "by Friday", etc.)
+5. Due dates (if mentioned: dates, days, deadlines - calculate exact dates based on current date)
+6. Task hierarchy (which items are main tasks vs subtasks based on indentation, bullets, numbering, visual structure)
+7. Tags/categories (suggest relevant tags based on content: "shopping", "work", "school", "home", "errands", etc.)
+8. Priority indicators (if marked as urgent, important, high priority, etc.)
+
+Return ONLY valid JSON in this exact format:
+{
+  "tasks": [
+    {
+      "title": "Buy groceries",
+      "description": "Need items for dinner party",
+      "location": "Whole Foods Market",
+      "time": "before 6pm",
+      "due_date": "2024-03-15",
+      "type": "main",
+      "subtasks": [
+        {
+          "title": "Get milk",
+          "notes": "organic, 2%"
+        },
+        {
+          "title": "Buy bread",
+          "notes": "sourdough"
+        }
+      ],
+      "suggested_tags": ["shopping", "errands"],
+      "priority": "medium"
+    }
+  ]
+}
+
+Rules:
+- Identify main tasks vs subtasks based on visual hierarchy (indentation, bullets, numbering)
+- If an item is indented or numbered as a sub-item, it's a subtask
+- Calculate exact dates for relative expressions (e.g., "tomorrow" means the day after ${currentDateTime.date})
+- Extract time if mentioned (convert to 24-hour format if needed)
+- Suggest relevant tags based on task content
+- If priority is marked (urgent, important, etc.), include it
+- Clean up task titles (remove filler words, fix typos)
+- Return empty array if no tasks detected
+
+Return ONLY valid JSON, no markdown, no explanations.`
+
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o', // GPT-4o supports vision
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt,
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${imageMimeType};base64,${imageBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error?.message || `OpenAI API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    const content = data.choices[0]?.message?.content
+
+    if (!content) {
+      throw new Error('No response from OpenAI')
+    }
+
+    // Parse JSON from response
+    let parsed: PhotoAnalysisResult
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0])
+      } else {
+        parsed = JSON.parse(content)
+      }
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      throw new Error('Failed to parse AI response. Please try again with a clearer image.')
+    }
+
+    // Validate structure
+    if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
+      throw new Error('Invalid response format: expected tasks array')
+    }
+
+    // Ensure all tasks have required fields
+    const validatedTasks = parsed.tasks
+      .filter((task) => task.title && task.title.trim().length > 0)
+      .map((task) => ({
+        ...task,
+        title: task.title.trim(),
+        description: task.description?.trim(),
+        location: task.location?.trim(),
+        time: task.time?.trim(),
+        type: task.type || 'main',
+        subtasks: task.subtasks?.filter((st) => st.title && st.title.trim().length > 0) || [],
+      }))
+
+    if (validatedTasks.length === 0) {
+      throw new Error('No tasks detected in the image. Please try a clearer photo of your to-do list.')
+    }
+
+    return {
+      tasks: validatedTasks,
+    }
+  } catch (error) {
+    console.error('Error analyzing photo:', error)
+    throw error
+  }
+}
+
+/**
  * Detect tags from input text
  */
 function detectTags(input: string): string[] {

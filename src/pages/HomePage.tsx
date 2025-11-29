@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Camera } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useWorkspaces } from '../contexts/WorkspacesContext'
 import { TaskList } from '../components/TaskList'
@@ -8,12 +8,14 @@ import { TaskForm } from '../components/TaskForm'
 import { NaturalLanguageInput } from '../components/NaturalLanguageInput'
 import { TaskListSkeleton } from '../components/SkeletonLoader'
 import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
+import { PhotoTaskRecognition } from '../components/PhotoTaskRecognition'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function HomePage() {
   const { loading, error, filteredAndSortedTasks } = useTasks()
   const { workspaces, currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaces()
   const [showNewTaskForm, setShowNewTaskForm] = useState(false)
+  const [showPhotoRecognition, setShowPhotoRecognition] = useState(false)
   const touchStartX = useRef<number | null>(null)
 
   const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId)
@@ -90,15 +92,26 @@ export function HomePage() {
                 : `${filteredAndSortedTasks.length} task${filteredAndSortedTasks.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button
-            onClick={() => setShowNewTaskForm(!showNewTaskForm)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark active:scale-95 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
-            aria-label="Create new task"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">New Task</span>
-            <span className="sm:hidden">New</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPhotoRecognition(true)}
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-background-tertiary hover:bg-background-tertiary/80 active:scale-95 text-text-primary rounded-lg transition-all duration-200 font-medium"
+              aria-label="Extract tasks from photo"
+              title="Extract tasks from photo"
+            >
+              <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Photo</span>
+            </button>
+            <button
+              onClick={() => setShowNewTaskForm(!showNewTaskForm)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark active:scale-95 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+              aria-label="Create new task"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">New Task</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -152,6 +165,16 @@ export function HomePage() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Photo Task Recognition Modal */}
+      <PhotoTaskRecognition
+        isOpen={showPhotoRecognition}
+        onClose={() => setShowPhotoRecognition(false)}
+        onTasksCreated={() => {
+          setShowPhotoRecognition(false)
+          // Tasks will appear automatically via realtime subscription
+        }}
+      />
     </div>
   )
 }
