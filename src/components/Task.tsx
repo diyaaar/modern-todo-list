@@ -47,7 +47,28 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const { getTaskLinks, addTaskLink, updateTaskLink, deleteTaskLink, getTaskImages, addTaskImage, deleteTaskImage } = useAttachments()
   const { showToast } = useToast()
   const { user } = useAuth()
-  const [isExpanded, setIsExpanded] = useState(true)
+  // Persist expand/collapse state in localStorage
+  const getStoredExpandedState = (): boolean => {
+    try {
+      const stored = localStorage.getItem(`task-expanded-${task.id}`)
+      return stored !== null ? stored === 'true' : true // Default to expanded
+    } catch {
+      return true
+    }
+  }
+
+  const [isExpanded, setIsExpanded] = useState(getStoredExpandedState)
+
+  // Update localStorage when expand state changes
+  const handleToggleExpand = () => {
+    const newState = !isExpanded
+    setIsExpanded(newState)
+    try {
+      localStorage.setItem(`task-expanded-${task.id}`, String(newState))
+    } catch (err) {
+      console.warn('Failed to save expand state to localStorage:', err)
+    }
+  }
   const [isEditing, setIsEditing] = useState(false)
   const [showAddSubtask, setShowAddSubtask] = useState(false)
   const [showAISuggestions, setShowAISuggestions] = useState(false)
@@ -565,7 +586,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
                 </button>
                 {hasSubtasks && (
                   <button
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={handleToggleExpand}
                     className="p-1.5 hover:bg-background-tertiary active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
                     aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
                     aria-expanded={isExpanded}

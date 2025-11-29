@@ -79,30 +79,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // CRITICAL: Don't clear tasks during workspace transitions
-    // Keep old tasks visible so AnimatePresence can animate them out
-    // Only update when new data arrives
+    // CRITICAL: Don't fetch if no workspace is selected
+    if (!currentWorkspaceId) {
+      console.log('[TasksContext] No workspace selected, skipping task fetch')
+      previousWorkspaceIdRef.current = null
+      setTasks([])
+      setLoading(false)
+      return
+    }
 
     try {
       setError(null)
       
-      // Only show loading skeleton on initial load (no previous workspace)
-      const isWorkspaceChange = previousWorkspaceIdRef.current !== null && previousWorkspaceIdRef.current !== currentWorkspaceId
-      if (!isWorkspaceChange) {
-        setLoading(true)
-      }
-
-      // CRITICAL: Don't fetch if no workspace is selected
-      if (!currentWorkspaceId) {
-        console.log('[TasksContext] No workspace selected, skipping task fetch')
-        previousWorkspaceIdRef.current = null
-        // Clear tasks after animation completes
-        setTimeout(() => {
-          setTasks([])
-          setLoading(false)
-        }, 300)
-        return
-      }
+      // Always show loading state when fetching
+      // This ensures users see feedback during workspace transitions
+      setLoading(true)
 
       const supabase = getSupabase()
       const query = supabase
@@ -135,7 +126,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching tasks:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch tasks')
       setLoading(false)
-      // Don't clear tasks on error - keep them visible
+      // On error, clear tasks to show error state clearly
+      setTasks([])
     }
   }, [user, currentWorkspaceId])
 
@@ -154,13 +146,18 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     }
 
     const userId = user.id
-    console.log('[Realtime] Setting up tasks subscription for user:', userId, 'workspace:', currentWorkspaceId)
+    const workspaceId = currentWorkspaceId // Capture current workspace ID
+    console.log('[Realtime] Setting up tasks subscription for user:', userId, 'workspace:', workspaceId)
     
-    // Initial fetch
-    fetchTasks()
+    // CRITICAL: Always fetch tasks when workspace changes
+    // Use a small delay to ensure workspace is fully set
+    const fetchTimeout = setTimeout(() => {
+      console.log('[Realtime] Fetching tasks for workspace:', workspaceId)
+      fetchTasks()
+    }, 50)
 
     const supabase = getSupabase()
-    const channelName = `tasks-changes-${userId}-${currentWorkspaceId}`
+    const channelName = `tasks-changes-${userId}-${workspaceId}`
     
     const channel = supabase
       .channel(channelName)
@@ -273,12 +270,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       })
 
     return () => {
-      console.log('[Realtime] Cleaning up tasks subscription')
+      console.log('[Realtime] Cleaning up tasks subscription for workspace:', workspaceId)
+      clearTimeout(fetchTimeout)
       supabase.removeChannel(channel)
     }
     // Re-subscribe when workspace changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, currentWorkspaceId])
+  }, [user?.id, currentWorkspaceId, fetchTasks])
 
   // Create task with optimistic update
   const createTask = useCallback(

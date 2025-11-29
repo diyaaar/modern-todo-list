@@ -2,6 +2,7 @@ import { TaskWithSubtasks } from '../types/task'
 
 /**
  * Calculate completion percentage for a task based on its subtasks
+ * Formula: (completed_subtasks / total_subtasks) * 100
  */
 export function calculateCompletionPercentage(task: TaskWithSubtasks): number {
   if (!task.subtasks || task.subtasks.length === 0) {
@@ -11,21 +12,15 @@ export function calculateCompletionPercentage(task: TaskWithSubtasks): number {
   const completedCount = task.subtasks.filter((subtask) => subtask.completed).length
   const totalCount = task.subtasks.length
 
-  // Calculate average completion of direct subtasks
-  const directCompletion = (completedCount / totalCount) * 100
+  if (totalCount === 0) {
+    return task.completed ? 100 : 0
+  }
 
-  // Calculate weighted average including nested subtasks
-  let weightedCompletion = 0
-  let totalWeight = 0
-
-  task.subtasks.forEach((subtask) => {
-    const subtaskCompletion = calculateCompletionPercentage(subtask)
-    const weight = 1 // Could be adjusted based on subtask importance
-    weightedCompletion += subtaskCompletion * weight
-    totalWeight += weight
-  })
-
-  return totalWeight > 0 ? Math.round(weightedCompletion / totalWeight) : directCompletion
+  // Simple calculation: (completed / total) * 100
+  const percentage = (completedCount / totalCount) * 100
+  
+  // Round to nearest integer for display
+  return Math.round(percentage)
 }
 
 /**
