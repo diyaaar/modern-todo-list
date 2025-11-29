@@ -1,0 +1,264 @@
+import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { useWorkspaces } from '../contexts/WorkspacesContext'
+import { useToast } from '../contexts/ToastContext'
+import { CreateWorkspaceModal } from './CreateWorkspaceModal'
+import { ConfirmDialog } from './ConfirmDialog'
+
+export function WorkspaceNavigation() {
+  const {
+    workspaces,
+    currentWorkspaceId,
+    setCurrentWorkspaceId,
+    deleteWorkspace,
+  } = useWorkspaces()
+  const { showToast } = useToast()
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<string | null>(null)
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ workspaceId: string; x: number; y: number } | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't navigate if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        handlePrevious()
+      } else if (e.key === 'ArrowRight') {
+        handleNext()
+      } else if (e.key === 'Escape') {
+        setContextMenu(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [workspaces, currentWorkspaceId])
+
+  const handlePrevious = () => {
+    const currentIndex = workspaces.findIndex((w) => w.id === currentWorkspaceId)
+    if (currentIndex > 0) {
+      setCurrentWorkspaceId(workspaces[currentIndex - 1].id)
+    }
+  }
+
+  const handleNext = () => {
+    const currentIndex = workspaces.findIndex((w) => w.id === currentWorkspaceId)
+    if (currentIndex < workspaces.length - 1) {
+      setCurrentWorkspaceId(workspaces[currentIndex + 1].id)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!workspaceToDelete) return
+
+    try {
+      await deleteWorkspace(workspaceToDelete)
+      showToast('Workspace deleted', 'success', 2000)
+      setShowDeleteConfirm(false)
+      setWorkspaceToDelete(null)
+    } catch (err) {
+      console.error('Error deleting workspace:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete workspace'
+      if (errorMessage.includes('last workspace')) {
+        showToast('Cannot delete the last workspace', 'error', 3000)
+      } else {
+        showToast(errorMessage, 'error', 3000)
+      }
+    }
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, workspaceId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ workspaceId, x: e.clientX, y: e.clientY })
+  }
+
+  const handleEdit = (workspaceId: string) => {
+    setEditingWorkspaceId(workspaceId)
+    setShowCreateModal(true)
+    setContextMenu(null)
+  }
+
+  const handleDeleteClick = (workspaceId: string) => {
+    setWorkspaceToDelete(workspaceId)
+    setShowDeleteConfirm(true)
+    setContextMenu(null)
+  }
+
+  const canGoPrevious = workspaces.findIndex((w) => w.id === currentWorkspaceId) > 0
+  const canGoNext = workspaces.findIndex((w) => w.id === currentWorkspaceId) < workspaces.length - 1
+
+  return (
+    <>
+      <div className="sticky top-0 z-40 pt-4 pb-2">
+        <div className="flex justify-center">
+          <motion.div
+            layout
+            initial={false}
+            className="inline-flex items-center gap-1 px-4 py-2 bg-background-secondary/80 backdrop-blur-md border border-background-tertiary rounded-2xl shadow-lg max-w-[90vw] overflow-hidden"
+            style={{
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            {/* Previous Button */}
+            <button
+              onClick={handlePrevious}
+              disabled={!canGoPrevious}
+              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+              aria-label="Previous workspace"
+            >
+              <ChevronLeft className="w-4 h-4 text-text-tertiary" />
+            </button>
+
+            {/* Workspace Tabs */}
+            <div
+              ref={scrollContainerRef}
+              className="flex items-center gap-1 overflow-x-auto scrollbar-hide"
+            >
+              <AnimatePresence mode="popLayout">
+                {workspaces.map((workspace) => {
+                  const isActive = workspace.id === currentWorkspaceId
+                  return (
+                    <motion.button
+                      key={workspace.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setCurrentWorkspaceId(workspace.id)}
+                      onDoubleClick={() => handleEdit(workspace.id)}
+                      onContextMenu={(e) => handleContextMenu(e, workspace.id)}
+                      className={`
+                        flex items-center gap-2 px-4 py-2 rounded-xl transition-all
+                        min-h-[44px] touch-manipulation relative
+                        ${isActive ? '' : 'hover:bg-background-tertiary/50'}
+                      `}
+                      style={{
+                        color: isActive ? workspace.color : undefined,
+                      }}
+                    >
+                      <span className="text-lg">{workspace.icon}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{workspace.name}</span>
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeTabIndicator"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                          style={{
+                            backgroundColor: workspace.color,
+                          }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 30,
+                          }}
+                        />
+                      )}
+                    </motion.button>
+                  )
+                })}
+              </AnimatePresence>
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={handleNext}
+              disabled={!canGoNext}
+              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+              aria-label="Next workspace"
+            >
+              <ChevronRight className="w-4 h-4 text-text-tertiary" />
+            </button>
+
+            {/* Create Button */}
+            <button
+              onClick={() => {
+                setEditingWorkspaceId(null)
+                setShowCreateModal(true)
+              }}
+              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all hover:scale-105 active:scale-95"
+              aria-label="Create new workspace"
+            >
+              <Plus className="w-5 h-5 text-text-tertiary" />
+            </button>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-50"
+            onClick={() => setContextMenu(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed z-50 bg-background-secondary border border-background-tertiary rounded-lg shadow-xl py-1 min-w-[120px]"
+            style={{
+              left: `${contextMenu.x}px`,
+              top: `${contextMenu.y}px`,
+            }}
+          >
+            <button
+              onClick={() => handleEdit(contextMenu.workspaceId)}
+              className="w-full px-4 py-2 text-left text-sm text-text-secondary hover:bg-background-tertiary transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => handleDeleteClick(contextMenu.workspaceId)}
+              className="w-full px-4 py-2 text-left text-sm text-danger hover:bg-background-tertiary transition-colors"
+            >
+              Delete
+            </button>
+          </motion.div>
+        </>
+      )}
+
+      {/* Create/Edit Workspace Modal */}
+      <CreateWorkspaceModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false)
+          setEditingWorkspaceId(null)
+        }}
+        editingWorkspace={editingWorkspaceId ? workspaces.find((w) => w.id === editingWorkspaceId) : null}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setWorkspaceToDelete(null)
+        }}
+        onConfirm={handleDelete}
+        title="Delete Workspace"
+        message={
+          workspaceToDelete
+            ? `Are you sure you want to delete "${workspaces.find((w) => w.id === workspaceToDelete)?.name}"? All tasks in this workspace will be moved to another workspace.`
+            : ''
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonColor="danger"
+      />
+    </>
+  )
+}
+

@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Emoji Picker Dark Theme Override */
+.epr-dark-theme {
+  background-color: rgb(26, 26, 26) !important;
+  border-color: rgb(40, 40, 40) !important;
+}
+
+.epr-dark-theme .epr-emoji-category-label {
+  background-color: rgb(26, 26, 26) !important;
+  color: rgb(200, 200, 200) !important;
+}
+
+.epr-dark-theme .epr-search-container input {
+  background-color: rgb(40, 40, 40) !important;
+  color: rgb(255, 255, 255) !important;
+  border-color: rgb(60, 60, 60) !important;
+}
+
+.epr-dark-theme .epr-emoji:hover {
+  background-color: rgb(40, 40, 40) !important;
+}
+
