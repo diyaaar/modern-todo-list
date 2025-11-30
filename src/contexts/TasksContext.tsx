@@ -60,6 +60,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   // Track pending updates to prevent duplicate realtime event handling
   const pendingUpdatesRef = useRef<Map<string, PendingUpdate>>(new Map())
   
+  // Track original completion states of subtasks when parent is completed
+  // Structure: Map<parentTaskId, Map<subtaskId, { completed: boolean, completed_at: string | null }>>
+  const originalSubtaskStatesRef = useRef<Map<string, Map<string, { completed: boolean; completed_at: string | null }>>>(new Map())
+  
   // Clean up old pending updates (older than 5 seconds)
   const cleanupPendingUpdates = useCallback(() => {
     const now = Date.now()
@@ -626,12 +630,26 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Also find all child tasks that will be affected
-    const childTasks = tasks.filter((t) => t.parent_task_id === id)
+    // Get all subtasks recursively (including nested subtasks)
+    const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
+      const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
+      const allSubtasks: typeof tasks = [...directSubtasks]
+      
+      directSubtasks.forEach((subtask) => {
+        // Recursively get nested subtasks
+        const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
+        allSubtasks.push(...nestedSubtasks)
+      })
+      
+      return allSubtasks
+    }
+    
+    const allSubtasks = getAllSubtasks(id, tasks)
+    const allTaskIdsToDelete = [id, ...allSubtasks.map((t) => t.id)]
 
-    // Optimistic update: remove task immediately from UI
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id))
-    console.log('[Optimistic] Task deleted optimistically:', id)
+    // Optimistic update: remove task and all subtasks immediately from UI
+    setTasks((prevTasks) => prevTasks.filter((task) => !allTaskIdsToDelete.includes(task.id)))
+    console.log(`[Optimistic] Task and ${allSubtasks.length} subtasks deleted optimistically:`, id)
 
     // Track this as pending update
     pendingUpdatesRef.current.set(id, {
@@ -643,15 +661,37 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     try {
       const supabase = getSupabase()
+      
+      // Delete all subtasks first (to maintain referential integrity)
+      if (allSubtasks.length > 0) {
+        const { error: subtasksDeleteError } = await supabase
+          .from('tasks')
+          .delete()
+          .in('id', allSubtasks.map((t) => t.id))
+        
+        if (subtasksDeleteError) {
+          // Rollback: restore task and all subtasks
+          setTasks((prevTasks) => {
+            const restored = [...prevTasks, currentTask, ...allSubtasks]
+            return restored
+          })
+          pendingUpdatesRef.current.delete(id)
+          console.error('[Optimistic] Rollback: Subtasks deletion failed', subtasksDeleteError)
+          throw subtasksDeleteError
+        }
+        console.log(`[Task Deletion] Deleted ${allSubtasks.length} subtasks from database`)
+      }
+      
+      // Delete the parent task
       const { error: deleteError } = await supabase
         .from('tasks')
         .delete()
         .eq('id', id)
 
       if (deleteError) {
-        // Rollback: restore task and children
+        // Rollback: restore task and all subtasks
         setTasks((prevTasks) => {
-          const restored = [...prevTasks, currentTask, ...childTasks]
+          const restored = [...prevTasks, currentTask, ...allSubtasks]
           return restored
         })
         pendingUpdatesRef.current.delete(id)
@@ -659,16 +699,27 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         throw deleteError
       }
 
+      // Clean up saved original states for deleted task and all its subtasks
+      originalSubtaskStatesRef.current.delete(id)
+      allSubtasks.forEach((subtask) => {
+        originalSubtaskStatesRef.current.delete(subtask.id)
+      })
+
       // Success - clean up tracking after delay
       setTimeout(() => {
         pendingUpdatesRef.current.delete(id)
       }, 2000)
 
-      showToast('Task deleted successfully', 'success', 2000)
+      const subtaskCount = allSubtasks.length
+      showToast(
+        `Task${subtaskCount > 0 ? ` and ${subtaskCount} subtask${subtaskCount !== 1 ? 's' : ''}` : ''} deleted successfully`,
+        'success',
+        2000
+      )
     } catch (err) {
       // Rollback if not already done
       setTasks((prevTasks) => {
-        const restored = [...prevTasks, currentTask, ...childTasks]
+        const restored = [...prevTasks, currentTask, ...allSubtasks]
         return restored
       })
       pendingUpdatesRef.current.delete(id)
@@ -691,13 +742,105 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         completed_at: newCompleted ? new Date().toISOString() : null,
       })
 
-      // If completing a task, check if all subtasks are complete
-      // If uncompleting, uncomplete parent tasks
+      // Helper to get all subtasks recursively (returns task objects, not just IDs)
+      const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
+        const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
+        const allSubtasks: typeof tasks = [...directSubtasks]
+        
+        directSubtasks.forEach((subtask) => {
+          // Recursively get nested subtasks
+          const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
+          allSubtasks.push(...nestedSubtasks)
+        })
+        
+        return allSubtasks
+      }
+
+      // If completing a task, save original states and mark all subtasks as completed recursively
+      // If uncompleting, restore original states
       if (newCompleted) {
-        // Check if all siblings are complete to auto-complete parent
-        // This logic can be enhanced
+        const allSubtasks = getAllSubtasks(id, tasks)
+        
+        // Save original completion states before overriding
+        if (allSubtasks.length > 0) {
+          const originalStates = new Map<string, { completed: boolean; completed_at: string | null }>()
+          
+          allSubtasks.forEach((subtask) => {
+            originalStates.set(subtask.id, {
+              completed: subtask.completed,
+              completed_at: subtask.completed_at,
+            })
+          })
+          
+          // Store original states for this parent task
+          originalSubtaskStatesRef.current.set(id, originalStates)
+          console.log(`[Task Completion] Saved original states for ${allSubtasks.length} subtasks of task ${id}`)
+        }
+        
+        // Mark all subtasks as completed in the database
+        if (allSubtasks.length > 0) {
+          try {
+            const supabase = getSupabase()
+            const { error: updateError } = await supabase
+              .from('tasks')
+              .update({
+                completed: true,
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .in('id', allSubtasks.map((t) => t.id))
+            
+            if (updateError) {
+              console.error('Error completing subtasks:', updateError)
+              // Rollback: remove saved states if update failed
+              originalSubtaskStatesRef.current.delete(id)
+              // Don't throw - parent task is already completed
+            } else {
+              console.log(`[Task Completion] Marked ${allSubtasks.length} subtasks as completed`)
+            }
+          } catch (err) {
+            console.error('Error completing subtasks:', err)
+            // Rollback: remove saved states if update failed
+            originalSubtaskStatesRef.current.delete(id)
+            // Don't throw - parent task is already completed
+          }
+        }
       } else {
-        // Uncomplete all parent tasks
+        // Uncompleting: restore original states of all subtasks
+        const originalStates = originalSubtaskStatesRef.current.get(id)
+        
+        if (originalStates && originalStates.size > 0) {
+          try {
+            const supabase = getSupabase()
+            
+            // Restore each subtask to its original state
+            const restorePromises = Array.from(originalStates.entries()).map(async ([subtaskId, originalState]) => {
+              const { error } = await supabase
+                .from('tasks')
+                .update({
+                  completed: originalState.completed,
+                  completed_at: originalState.completed_at,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', subtaskId)
+              
+              if (error) {
+                console.error(`Error restoring subtask ${subtaskId}:`, error)
+              }
+            })
+            
+            await Promise.all(restorePromises)
+            console.log(`[Task Completion] Restored original states for ${originalStates.size} subtasks`)
+            
+            // Clean up: remove saved states after restoration
+            originalSubtaskStatesRef.current.delete(id)
+          } catch (err) {
+            console.error('Error restoring subtask states:', err)
+            // Don't throw - parent task is already uncompleted
+          }
+        }
+        
+        // Also uncomplete all parent tasks (existing behavior)
         let parentId = task.parent_task_id
         while (parentId) {
           const parent = tasks.find((t) => t.id === parentId)

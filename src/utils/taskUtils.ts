@@ -1,23 +1,43 @@
 import { TaskWithSubtasks } from '../types/task'
 
 /**
- * Calculate completion percentage for a task based on its subtasks
- * Formula: (completed_subtasks / total_subtasks) * 100
+ * Calculate completion percentage for a task based on all its descendant subtasks (recursive)
+ * Formula: (completed_descendants / total_descendants) * 100
+ * Counts all subtasks at every depth in the hierarchy
  */
 export function calculateCompletionPercentage(task: TaskWithSubtasks): number {
+  // If task has no subtasks, return 100% if completed, 0% if not
   if (!task.subtasks || task.subtasks.length === 0) {
     return task.completed ? 100 : 0
   }
 
-  const completedCount = task.subtasks.filter((subtask) => subtask.completed).length
-  const totalCount = task.subtasks.length
+  // Recursively count all descendant subtasks (at every depth)
+  let totalDescendants = 0
+  let completedDescendants = 0
 
-  if (totalCount === 0) {
+  function countDescendants(subtasks: TaskWithSubtasks[]) {
+    subtasks.forEach((subtask) => {
+      // Count this subtask
+      totalDescendants++
+      if (subtask.completed) {
+        completedDescendants++
+      }
+      
+      // Recursively count nested subtasks
+      if (subtask.subtasks && subtask.subtasks.length > 0) {
+        countDescendants(subtask.subtasks)
+      }
+    })
+  }
+
+  countDescendants(task.subtasks)
+
+  if (totalDescendants === 0) {
     return task.completed ? 100 : 0
   }
 
-  // Simple calculation: (completed / total) * 100
-  const percentage = (completedCount / totalCount) * 100
+  // Calculate percentage: (completed_descendants / total_descendants) * 100
+  const percentage = (completedDescendants / totalDescendants) * 100
   
   // Round to nearest integer for display
   return Math.round(percentage)

@@ -409,7 +409,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
                 </div>
 
                 {/* Progress Bar */}
-                {hasSubtasks && completionPercentage < 100 && (
+                {hasSubtasks && (
                   <div className="mt-2 h-1.5 bg-background-tertiary rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
