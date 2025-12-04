@@ -9,6 +9,6 @@ export interface TaskWithSubtasks extends Task {
 }
 
 export type TaskPriority = 'high' | 'medium' | 'low' | null
-export type TaskFilter = 'all' | 'active' | 'completed'
+export type TaskFilter = 'all' | 'active' | 'completed' | 'archived'
 export type TaskSort = 'created' | 'deadline' | 'priority' | 'title'
 

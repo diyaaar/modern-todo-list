@@ -5,6 +5,7 @@ import { TasksProvider } from './contexts/TasksContext'
 import { TagsProvider } from './contexts/TagsContext'
 import { AttachmentsProvider } from './contexts/AttachmentsContext'
 import { ToastProvider } from './contexts/ToastContext'
+import { UndoSnackbarProvider } from './contexts/UndoSnackbarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
@@ -22,31 +23,33 @@ function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <WorkspacesProvider>
-                    <TagsProvider>
-                      <AttachmentsProvider>
-                        <TasksProvider>
-                          <Layout>
-                            <HomePage />
-                          </Layout>
-                        </TasksProvider>
-                      </AttachmentsProvider>
-                    </TagsProvider>
-                  </WorkspacesProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+        <UndoSnackbarProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <WorkspacesProvider>
+                      <TagsProvider>
+                        <AttachmentsProvider>
+                          <TasksProvider>
+                            <Layout>
+                              <HomePage />
+                            </Layout>
+                          </TasksProvider>
+                        </AttachmentsProvider>
+                      </TagsProvider>
+                    </WorkspacesProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </UndoSnackbarProvider>
       </AuthProvider>
     </ToastProvider>
   )

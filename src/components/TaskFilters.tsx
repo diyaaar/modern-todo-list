@@ -1,4 +1,4 @@
-import { Search, Filter, SortAsc, Calendar, Tag } from 'lucide-react'
+import { Search, Filter, SortAsc, Calendar, Tag, Archive } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useTags } from '../contexts/TagsContext'
 import { TaskFilter, TaskSort } from '../types/task'
@@ -41,15 +41,46 @@ export function TaskFilters() {
           <Filter className="w-4 h-4 text-text-tertiary" />
           <select
             value={filter}
-            onChange={(e) => setFilter(e.target.value as TaskFilter)}
+            onChange={(e) => {
+              const newFilter = e.target.value as TaskFilter
+              console.log('[TaskFilters] Filter changed to:', newFilter)
+              setFilter(newFilter)
+            }}
             className="px-3 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             aria-label="Filter tasks by status"
           >
             <option value="all">All Tasks</option>
             <option value="active">Active</option>
             <option value="completed">Completed</option>
+            <option value="archived">Archived</option>
           </select>
+          {filter === 'archived' && (
+            <span className="text-xs text-primary font-medium">(Viewing Archive)</span>
+          )}
         </div>
+
+        {/* Archive Toggle Button - More prominent way to switch to archive view */}
+        <button
+          onClick={() => {
+            const newFilter = filter === 'archived' ? 'all' : 'archived'
+            console.log('[TaskFilters] Switching to filter:', newFilter)
+            setFilter(newFilter)
+          }}
+          className={`
+            flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+            focus:outline-none focus:ring-2 focus:ring-primary
+            ${
+              filter === 'archived'
+                ? 'bg-primary text-white hover:bg-primary-dark shadow-lg'
+                : 'bg-background-tertiary text-text-primary hover:bg-background-tertiary/80 border border-background-tertiary hover:border-primary/50'
+            }
+          `}
+          aria-label={filter === 'archived' ? 'Show active tasks' : 'Show archived tasks'}
+          title={filter === 'archived' ? 'Show active tasks' : 'Show archived tasks'}
+        >
+          <Archive className="w-4 h-4" />
+          <span>{filter === 'archived' ? 'Active' : 'Archive'}</span>
+        </button>
 
         {/* Sort */}
         <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Plus, Camera } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useWorkspaces } from '../contexts/WorkspacesContext'
+import { useUndoSnackbar } from '../contexts/UndoSnackbarContext'
 import { TaskList } from '../components/TaskList'
 import { TaskFilters } from '../components/TaskFilters'
 import { TaskForm } from '../components/TaskForm'
@@ -9,11 +10,13 @@ import { NaturalLanguageInput } from '../components/NaturalLanguageInput'
 import { TaskListSkeleton } from '../components/SkeletonLoader'
 import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { PhotoTaskRecognition } from '../components/PhotoTaskRecognition'
+import { UndoSnackbar } from '../components/UndoSnackbar'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function HomePage() {
-  const { loading, error, filteredAndSortedTasks } = useTasks()
+  const { loading, error, filteredAndSortedTasks, filter } = useTasks()
   const { workspaces, currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaces()
+  const { currentAction, isOpen, closeSnackbar } = useUndoSnackbar()
   const [showNewTaskForm, setShowNewTaskForm] = useState(false)
   const [showPhotoRecognition, setShowPhotoRecognition] = useState(false)
   const touchStartX = useRef<number | null>(null)
@@ -85,10 +88,14 @@ export function HomePage() {
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">Your Tasks</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">
+              {filter === 'archived' ? 'Archived Tasks' : 'Your Tasks'}
+            </h2>
             <p className="text-sm sm:text-base text-text-tertiary">
               {filteredAndSortedTasks.length === 0
-                ? 'Start by creating your first task'
+                ? filter === 'archived' 
+                  ? 'No archived tasks'
+                  : 'Start by creating your first task'
                 : `${filteredAndSortedTasks.length} task${filteredAndSortedTasks.length !== 1 ? 's' : ''}`}
             </p>
           </div>
@@ -175,6 +182,16 @@ export function HomePage() {
           // Tasks will appear automatically via realtime subscription
         }}
       />
+
+      {/* Global Undo Snackbar */}
+      {currentAction && (
+        <UndoSnackbar
+          isOpen={isOpen}
+          onUndo={currentAction.onUndo}
+          onClose={closeSnackbar}
+          message={currentAction.message}
+        />
+      )}
     </div>
   )
 }

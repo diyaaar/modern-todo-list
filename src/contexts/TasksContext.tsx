@@ -24,6 +24,8 @@ interface TasksContextType {
   updateTask: (id: string, updates: TaskUpdate, suppressToast?: boolean) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   toggleTaskComplete: (id: string) => Promise<void>
+  archiveTask: (id: string) => Promise<void>
+  unarchiveTask: (id: string) => Promise<void>
   addAISuggestions: (taskId: string, suggestions: string[]) => Promise<void>
   filter: TaskFilter
   setFilter: (filter: TaskFilter) => void
@@ -119,11 +121,23 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
       console.log('[TasksContext] Fetched tasks:', data?.length || 0, 'for workspace:', currentWorkspaceId)
       
+      // Normalize tasks: ensure archived field exists (default to false if null/undefined)
+      const normalizedTasks = (data || []).map((task) => ({
+        ...task,
+        archived: task.archived ?? false, // Default to false if null/undefined
+      }))
+      
+      // Log archived tasks for debugging
+      const archivedCount = normalizedTasks.filter((t) => t.archived === true).length
+      if (archivedCount > 0) {
+        console.log(`[TasksContext] Found ${archivedCount} archived task(s) in workspace ${currentWorkspaceId}`)
+      }
+      
       // Update tasks immediately - AnimatePresence will handle smooth crossfade
       // Old tasks (from previous workspace) will fade out via exit animation
       // New tasks (for current workspace) will fade in via enter animation
       // The key={currentWorkspaceId} in HomePage ensures proper animation trigger
-      setTasks(data || [])
+      setTasks(normalizedTasks)
       setLoading(false)
       previousWorkspaceIdRef.current = currentWorkspaceId
     } catch (err) {
@@ -341,6 +355,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           parent_task_id: taskData.parent_task_id || null,
           workspace_id: currentWorkspaceId, // CRITICAL: Always use current workspace
           completed: false,
+          archived: false,
           user_id: user.id,
           position: maxPosition,
           updated_at: new Date().toISOString(),
@@ -360,6 +375,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           deadline: taskToInsert.deadline ?? null,
           completed: taskToInsert.completed ?? false,
           completed_at: null,
+          archived: taskToInsert.archived ?? false,
           position: taskToInsert.position ?? null,
           background_image_url: taskToInsert.background_image_url ?? null,
           background_image_display_mode: taskToInsert.background_image_display_mode ?? null,
@@ -857,6 +873,105 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     [tasks, updateTask]
   )
 
+  // Archive task with cascade to all subtasks
+  const archiveTask = useCallback(
+    async (id: string) => {
+      // Get all subtasks recursively (including nested subtasks)
+      const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
+        const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
+        const allSubtasks: typeof tasks = [...directSubtasks]
+        
+        directSubtasks.forEach((subtask) => {
+          // Recursively get nested subtasks
+          const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
+          allSubtasks.push(...nestedSubtasks)
+        })
+        
+        return allSubtasks
+      }
+      
+      const allSubtasks = getAllSubtasks(id, tasks)
+      const allTaskIdsToArchive = [id, ...allSubtasks.map((t) => t.id)]
+
+      try {
+        const supabase = getSupabase()
+        
+        // Archive all tasks (parent + all subtasks) in the database
+        const { error: archiveError } = await supabase
+          .from('tasks')
+          .update({
+            archived: true,
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', allTaskIdsToArchive)
+        
+        if (archiveError) {
+          console.error('Error archiving task:', archiveError)
+          throw archiveError
+        }
+
+        console.log(`[Archive] Archived ${allTaskIdsToArchive.length} tasks (1 parent + ${allSubtasks.length} subtasks)`)
+      } catch (err) {
+        console.error('Error archiving task:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Failed to archive task'
+        setError(errorMessage)
+        showToast(errorMessage, 'error')
+        throw err
+      }
+    },
+    [tasks, showToast]
+  )
+
+  // Unarchive task with cascade to all subtasks
+  const unarchiveTask = useCallback(
+    async (id: string) => {
+      // Get all subtasks recursively (including nested subtasks)
+      const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
+        const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
+        const allSubtasks: typeof tasks = [...directSubtasks]
+        
+        directSubtasks.forEach((subtask) => {
+          // Recursively get nested subtasks
+          const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
+          allSubtasks.push(...nestedSubtasks)
+        })
+        
+        return allSubtasks
+      }
+      
+      const allSubtasks = getAllSubtasks(id, tasks)
+      const allTaskIdsToUnarchive = [id, ...allSubtasks.map((t) => t.id)]
+
+      try {
+        const supabase = getSupabase()
+        
+        // Unarchive all tasks (parent + all subtasks) in the database
+        // This preserves all completion states - archiving doesn't modify them
+        const { error: unarchiveError } = await supabase
+          .from('tasks')
+          .update({
+            archived: false,
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', allTaskIdsToUnarchive)
+        
+        if (unarchiveError) {
+          console.error('Error unarchiving task:', unarchiveError)
+          throw unarchiveError
+        }
+
+        console.log(`[Archive] Unarchived ${allTaskIdsToUnarchive.length} tasks (1 parent + ${allSubtasks.length} subtasks)`)
+      } catch (err) {
+        console.error('Error unarchiving task:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Failed to unarchive task'
+        setError(errorMessage)
+        showToast(errorMessage, 'error')
+        throw err
+      }
+    },
+    [tasks, showToast]
+  )
+
   // Add AI suggestions as subtasks
   const addAISuggestions = useCallback(
     async (taskId: string, suggestions: string[]) => {
@@ -994,11 +1109,38 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    // Apply status filter
-    if (filter === 'active') {
-      filtered = filtered.filter((task) => !task.completed)
-    } else if (filter === 'completed') {
-      filtered = filtered.filter((task) => task.completed)
+    // Apply status filter (archived filter takes precedence)
+    // Handle null/undefined archived values (for tasks created before archive feature)
+    console.log(`[Filter] Current filter: ${filter}, Total tasks before filter: ${filtered.length}`)
+    
+    if (filter === 'archived') {
+      // Show ONLY tasks where archived is explicitly true AND workspace_id matches
+      const beforeFilter = filtered.length
+      filtered = filtered.filter((task) => {
+        const isArchived = task.archived === true
+        const matchesWorkspace = task.workspace_id === currentWorkspaceId
+        return isArchived && matchesWorkspace
+      })
+      console.log(`[Filter] ARCHIVED MODE: Showing ${filtered.length} archived tasks (filtered from ${beforeFilter} tasks)`)
+      console.log(`[Filter] Archived task IDs:`, filtered.map(t => t.id))
+    } else {
+      // For 'all', 'active', and 'completed', exclude archived tasks
+      // Treat null/undefined as false (not archived)
+      const beforeArchiveFilter = filtered.length
+      filtered = filtered.filter((task) => {
+        // Exclude tasks where archived is explicitly true
+        return !(task.archived === true)
+      })
+      const afterArchiveFilter = filtered.length
+      if (beforeArchiveFilter !== afterArchiveFilter) {
+        console.log(`[Filter] Excluded ${beforeArchiveFilter - afterArchiveFilter} archived tasks`)
+      }
+      
+      if (filter === 'active') {
+        filtered = filtered.filter((task) => !task.completed)
+      } else if (filter === 'completed') {
+        filtered = filtered.filter((task) => task.completed)
+      }
     }
 
     // Apply tag filter
@@ -1053,6 +1195,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     updateTask,
     deleteTask,
     toggleTaskComplete,
+    archiveTask,
+    unarchiveTask,
     addAISuggestions,
     filter,
     setFilter,

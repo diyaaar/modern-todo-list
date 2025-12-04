@@ -7,6 +7,7 @@ import {
   Edit,
   Plus,
   Calendar,
+  CalendarPlus,
   Flag,
   Sparkles,
   Image as ImageIcon,
@@ -14,6 +15,8 @@ import {
   Paperclip,
   X,
   Folder,
+  Archive,
+  Loader2,
 } from 'lucide-react'
 import { TaskWithSubtasks } from '../types/task'
 import { useTasks } from '../contexts/TasksContext'
@@ -33,6 +36,7 @@ import { LinkAttachmentModal } from './LinkAttachmentModal'
 import { ImageAttachmentModal } from './ImageAttachmentModal'
 import { MoveTaskModal } from './MoveTaskModal'
 import { ConfirmDialog } from './ConfirmDialog'
+import { useUndoSnackbar } from '../contexts/UndoSnackbarContext'
 import { getImageUrl } from '../lib/storage'
 import { TaskLink, TaskImage } from '../types/attachment'
 
@@ -42,10 +46,11 @@ interface TaskProps {
 }
 
 export function Task({ task, depth = 0 }: TaskProps) {
-  const { toggleTaskComplete, deleteTask, addAISuggestions, updateTask } = useTasks()
+  const { toggleTaskComplete, deleteTask, archiveTask, unarchiveTask, addAISuggestions, updateTask } = useTasks()
   const { getTaskTags, removeTagFromTask } = useTags()
   const { getTaskLinks, addTaskLink, updateTaskLink, deleteTaskLink, getTaskImages, addTaskImage, deleteTaskImage } = useAttachments()
   const { showToast } = useToast()
+  const { showSnackbar } = useUndoSnackbar()
   const { user } = useAuth()
   // Persist expand/collapse state in localStorage
   const getStoredExpandedState = (): boolean => {
@@ -82,6 +87,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const [viewingImage, setViewingImage] = useState<TaskImage | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false)
 
   // Load task tags
   useEffect(() => {
@@ -247,6 +253,96 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const handleConfirmDelete = async () => {
     setShowDeleteConfirm(false)
     await deleteTask(task.id)
+  }
+
+  const handleArchive = async () => {
+    try {
+      // Store task title and current state for the snackbar message
+      const taskTitle = task.title
+      
+      // Archive the task first
+      await archiveTask(task.id)
+      
+      // Show snackbar after successful archive with undo action
+      showSnackbar({
+        id: task.id,
+        message: `Task "${taskTitle}" archived`,
+        onUndo: async () => {
+          await unarchiveTask(task.id)
+        },
+      })
+    } catch (err) {
+      console.error('Error archiving task:', err)
+      // Don't show snackbar if archive failed
+    }
+  }
+
+  const handleAddToCalendar = async () => {
+    setIsAddingToCalendar(true)
+    try {
+      // Format date as ISO 8601
+      // If task has a deadline, use it; otherwise use current date/time
+      let dateString: string
+      if (task.deadline) {
+        // Ensure the deadline is in ISO 8601 format
+        const deadlineDate = new Date(task.deadline)
+        dateString = deadlineDate.toISOString()
+      } else {
+        // Use current date/time if no deadline
+        dateString = new Date().toISOString()
+      }
+
+      // Prepare payload
+      const payload = {
+        title: task.title,
+        date: dateString,
+        description: task.description || '',
+      }
+
+      // Send to webhook via proxy endpoint (avoids CORS issues)
+      const response = await fetch('/api/calendar-webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        let errorData: any = {}
+        try {
+          const text = await response.text()
+          errorData = text ? JSON.parse(text) : {}
+        } catch {
+          errorData = {}
+        }
+        
+        // Provide helpful error message for 404 (API endpoint not found)
+        if (response.status === 404) {
+          throw new Error('API endpoint not found. For local development, please run: npx vercel dev')
+        }
+        
+        // Provide detailed error message for 500 errors
+        if (response.status === 500) {
+          const errorMsg = errorData.error || errorData.details || 'Internal server error'
+          const isDev = import.meta.env.DEV
+          const devMessage = isDev 
+            ? ' For local development, you need to run: npx vercel dev (in a separate terminal)'
+            : ''
+          throw new Error(`Server error: ${errorMsg}.${devMessage}`)
+        }
+        
+        throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`)
+      }
+
+      showToast('Added to calendar ✓', 'success', 2000)
+    } catch (err) {
+      console.error('Error adding task to calendar:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add to calendar. Please try again.'
+      showToast(errorMessage, 'error', 4000)
+    } finally {
+      setIsAddingToCalendar(false)
+    }
   }
 
   if (isEditing) {
@@ -553,6 +649,19 @@ export function Task({ task, depth = 0 }: TaskProps) {
               {/* Actions */}
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
+                  onClick={handleAddToCalendar}
+                  disabled={isAddingToCalendar}
+                  className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Add to calendar"
+                  aria-label="Add to calendar"
+                >
+                  {isAddingToCalendar ? (
+                    <Loader2 className="w-4 h-4 text-text-tertiary group-hover:text-primary transition-colors animate-spin" />
+                  ) : (
+                    <CalendarPlus className="w-4 h-4 text-text-tertiary group-hover:text-primary transition-colors" />
+                  )}
+                </button>
+                <button
                   onClick={() => setShowAISuggestions(true)}
                   className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-primary"
                   title="AI suggestions for subtasks"
@@ -568,6 +677,28 @@ export function Task({ task, depth = 0 }: TaskProps) {
                 >
                   <Plus className="w-4 h-4 text-text-tertiary" />
                 </button>
+                {/* Archive button - show on hover for completed tasks */}
+                {task.completed && !task.archived && (
+                  <button
+                    onClick={handleArchive}
+                    className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary group/archive"
+                    title="Archive task"
+                    aria-label="Archive task"
+                  >
+                    <Archive className="w-4 h-4 text-text-tertiary group-hover/archive:text-primary transition-colors" />
+                  </button>
+                )}
+                {/* Unarchive button - show when viewing archived tasks */}
+                {task.archived && (
+                  <button
+                    onClick={() => unarchiveTask(task.id)}
+                    className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary group/unarchive"
+                    title="Unarchive task"
+                    aria-label="Unarchive task"
+                  >
+                    <Archive className="w-4 h-4 text-primary" />
+                  </button>
+                )}
                 <button
                   onClick={() => setIsEditing(true)}
                   className="p-1.5 hover:bg-background-tertiary active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary"

@@ -79,6 +79,7 @@ export interface Database {
           deadline: string | null
           completed: boolean
           completed_at: string | null
+          archived: boolean
           position: number | null
           background_image_url: string | null
           background_image_display_mode: 'thumbnail' | 'icon' | null
@@ -96,6 +97,7 @@ export interface Database {
           deadline?: string | null
           completed?: boolean
           completed_at?: string | null
+          archived?: boolean
           position?: number | null
           background_image_url?: string | null
           background_image_display_mode?: 'thumbnail' | 'icon' | null
@@ -113,6 +115,7 @@ export interface Database {
           deadline?: string | null
           completed?: boolean
           completed_at?: string | null
+          archived?: boolean
           position?: number | null
           background_image_url?: string | null
           background_image_display_mode?: 'thumbnail' | 'icon' | null
