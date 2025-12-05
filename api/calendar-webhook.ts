@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const WEBHOOK_URL = 'https://n8n.alidiyarduran.com/webhook/42c25513-6e59-43cd-b917-677ca5a8bcfc'
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for all origins
@@ -17,6 +18,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // Validate webhook secret is configured
+  if (!WEBHOOK_SECRET) {
+    console.error('WEBHOOK_SECRET environment variable is not configured')
+    return res.status(500).json({ error: 'Webhook secret is not configured' })
+  }
+
   try {
     const { title, date, description } = req.body
 
@@ -28,12 +35,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'date is required' })
     }
 
-    // Forward the request to the webhook
+    // Prepare headers with authentication
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'X-Webhook-Secret': WEBHOOK_SECRET,
+    }
+
+    // Forward the request to the webhook with authentication header
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         title,
         date,
