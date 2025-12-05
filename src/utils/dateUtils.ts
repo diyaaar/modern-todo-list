@@ -134,7 +134,7 @@ export function getDeadlineColor(deadline: string | null): string {
 }
 
 /**
- * Format deadline for display
+ * Format deadline for display with time
  */
 export function formatDeadline(deadline: string | null, time: string | null = null): string {
   if (!deadline) return 'No deadline'
@@ -143,10 +143,27 @@ export function formatDeadline(deadline: string | null, time: string | null = nu
     const deadlineDate = parseISO(deadline)
     const formattedDate = format(deadlineDate, 'MMM d, yyyy', { locale: enUS })
     
+    // If time is explicitly provided, use it
     if (time) {
       return `${formattedDate} at ${time}`
     }
     
+    // Check if the deadline has a specific time (not midnight or end of day)
+    const hours = deadlineDate.getHours()
+    const minutes = deadlineDate.getMinutes()
+    const seconds = deadlineDate.getSeconds()
+    const milliseconds = deadlineDate.getMilliseconds()
+    
+    // If it's not midnight (00:00:00.000) or end of day (23:59:59.999), show the time
+    const isMidnight = hours === 0 && minutes === 0 && seconds === 0 && milliseconds === 0
+    const isEndOfDay = hours === 23 && minutes === 59 && seconds === 59 && milliseconds >= 999
+    
+    if (!isMidnight && !isEndOfDay) {
+      const formattedTime = format(deadlineDate, 'h:mm a', { locale: enUS })
+      return `${formattedDate} at ${formattedTime}`
+    }
+    
+    // For backward compatibility: if it's midnight or end of day, show only date
     return formattedDate
   } catch {
     return deadline

@@ -24,6 +24,7 @@ import { useTags } from '../contexts/TagsContext'
 import { useAttachments } from '../contexts/AttachmentsContext'
 import { useToast } from '../contexts/ToastContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useWorkspaces } from '../contexts/WorkspacesContext'
 import { getSupabaseClient } from '../lib/supabase'
 import { calculateCompletionPercentage } from '../utils/taskUtils'
 import { isPast, isToday } from 'date-fns'
@@ -52,6 +53,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const { showToast } = useToast()
   const { showSnackbar } = useUndoSnackbar()
   const { user } = useAuth()
+  const { workspaces } = useWorkspaces()
   // Persist expand/collapse state in localStorage
   const getStoredExpandedState = (): boolean => {
     try {
@@ -277,6 +279,27 @@ export function Task({ task, depth = 0 }: TaskProps) {
     }
   }
 
+  // Color to ID mapping
+  const getColorId = (colorHex: string | null | undefined): number | null => {
+    if (!colorHex) return null
+    
+    const colorToId: Record<string, number> = {
+      '#a4bdfc': 1,  // Light Blue
+      '#7ae7bf': 2,  // Mint Green
+      '#dbadff': 3,  // Light Purple
+      '#ff887c': 4,  // Coral/Salmon
+      '#fbd75b': 5,  // Light Yellow
+      '#ffb878': 6,  // Peach/Orange
+      '#46d6db': 7,  // Cyan
+      '#e1e1e1': 8,  // Light Gray
+      '#5484ed': 9,  // Medium Blue
+      '#51b749': 10, // Green
+      '#dc2127': 11  // Red
+    }
+    
+    return colorToId[colorHex.toLowerCase()] || null
+  }
+
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
     try {
@@ -292,11 +315,28 @@ export function Task({ task, depth = 0 }: TaskProps) {
         dateString = new Date().toISOString()
       }
 
+      // Get workspace color
+      const workspace = task.workspace_id 
+        ? workspaces.find(w => w.id === task.workspace_id)
+        : null
+      const workspaceColor = workspace?.color || null
+      const colorId = getColorId(workspaceColor)
+
       // Prepare payload
-      const payload = {
-        title: task.title,
-        date: dateString,
+      const payload: {
+        summary: string
+        description: string
+        time: string
+        colorId?: number
+      } = {
+        summary: task.title,
+        time: dateString,
         description: task.description || '',
+      }
+
+      // Add colorId if available
+      if (colorId !== null) {
+        payload.colorId = colorId
       }
 
       // Send to webhook via proxy endpoint (avoids CORS issues)
@@ -478,7 +518,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
                       `}
                     >
                       <Calendar className="w-3 h-3" />
-                      {formatDeadline(task.deadline, task.description?.includes('Time:') ? task.description.split('Time:')[1]?.trim() : null)}
+                      {formatDeadline(task.deadline)}
                     </span>
                   )}
 

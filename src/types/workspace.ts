@@ -5,14 +5,17 @@ export type WorkspaceInsert = Database['public']['Tables']['workspaces']['Insert
 export type WorkspaceUpdate = Database['public']['Tables']['workspaces']['Update']
 
 export const WORKSPACE_COLORS = [
-  { name: 'Blue', value: '#3b82f6' },
-  { name: 'Green', value: '#10b981' },
-  { name: 'Purple', value: '#a855f7' },
-  { name: 'Orange', value: '#f97316' },
-  { name: 'Red', value: '#ef4444' },
-  { name: 'Yellow', value: '#eab308' },
-  { name: 'Cyan', value: '#06b6d4' },
-  { name: 'Pink', value: '#ec4899' },
+  { name: 'Light Blue', value: '#a4bdfc' },
+  { name: 'Mint Green', value: '#7ae7bf' },
+  { name: 'Light Purple', value: '#dbadff' },
+  { name: 'Coral', value: '#ff887c' },
+  { name: 'Light Yellow', value: '#fbd75b' },
+  { name: 'Peach', value: '#ffb878' },
+  { name: 'Cyan', value: '#46d6db' },
+  { name: 'Light Gray', value: '#e1e1e1' },
+  { name: 'Medium Blue', value: '#5484ed' },
+  { name: 'Green', value: '#51b749' },
+  { name: 'Red', value: '#dc2127' },
 ] as const
 
 // Emoji picker is now used instead of hardcoded array

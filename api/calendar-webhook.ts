@@ -25,14 +25,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { title, date, description } = req.body
+    const { summary, time, description, colorId } = req.body
 
-    if (!title) {
-      return res.status(400).json({ error: 'title is required' })
+    if (!summary) {
+      return res.status(400).json({ error: 'summary is required' })
     }
 
-    if (!date) {
-      return res.status(400).json({ error: 'date is required' })
+    if (!time) {
+      return res.status(400).json({ error: 'time is required' })
     }
 
     // Prepare headers with authentication
@@ -41,15 +41,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'X-Webhook-Secret': WEBHOOK_SECRET,
     }
 
+    // Prepare payload for n8n webhook
+    const payload: {
+      summary: string
+      description: string
+      time: string
+      colorId?: number
+    } = {
+      summary,
+      time,
+      description: description || '',
+    }
+
+    // Add colorId if provided (as number, not string)
+    if (colorId !== undefined && colorId !== null) {
+      payload.colorId = typeof colorId === 'string' ? parseInt(colorId, 10) : colorId
+    }
+
     // Forward the request to the webhook with authentication header
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        title,
-        date,
-        description: description || '',
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {

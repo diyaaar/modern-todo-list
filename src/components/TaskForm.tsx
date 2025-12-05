@@ -30,9 +30,21 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
   const [priority, setPriority] = useState<'high' | 'medium' | 'low' | null>(
     task?.priority || null
   )
-  const [deadline, setDeadline] = useState(
-    task?.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : ''
-  )
+  // Initialize date and time from task deadline
+  const getInitialDateAndTime = () => {
+    if (task?.deadline) {
+      const deadlineDate = new Date(task.deadline)
+      return {
+        date: format(deadlineDate, 'yyyy-MM-dd'),
+        time: format(deadlineDate, 'HH:mm'),
+      }
+    }
+    return { date: '', time: '' }
+  }
+
+  const initialDateTime = getInitialDateAndTime()
+  const [deadline, setDeadline] = useState(initialDateTime.date)
+  const [deadlineTime, setDeadlineTime] = useState(initialDateTime.time)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   
   // Attachment states for new tasks
@@ -76,6 +88,22 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
     e.preventDefault()
     if (!title.trim()) return
 
+    // Combine date and time into ISO string
+    let deadlineISO: string | null = null
+    if (deadline) {
+      const dateObj = new Date(deadline)
+      if (deadlineTime) {
+        // Set time if provided
+        const [hours, minutes] = deadlineTime.split(':').map(Number)
+        dateObj.setHours(hours, minutes, 0, 0)
+      } else {
+        // Default to current time if date but no time
+        const now = new Date()
+        dateObj.setHours(now.getHours(), now.getMinutes(), 0, 0)
+      }
+      deadlineISO = dateObj.toISOString()
+    }
+
     let createdTaskId: string | null = null
 
     if (task) {
@@ -84,7 +112,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         title: title.trim(),
         description: description.trim() || null,
         priority,
-        deadline: deadline ? new Date(deadline).toISOString() : null,
+        deadline: deadlineISO,
         background_image_url: backgroundImageUrl,
         background_image_display_mode: backgroundDisplayMode,
       })
@@ -95,7 +123,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         title: title.trim(),
         description: description.trim() || null,
         priority,
-        deadline: deadline ? new Date(deadline).toISOString() : null,
+        deadline: deadlineISO,
         parent_task_id: parentTaskId || null,
         background_image_url: backgroundImageUrl,
         background_image_display_mode: backgroundDisplayMode,
@@ -228,7 +256,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
           </select>
         </div>
 
-        {/* Deadline */}
+        {/* Deadline - Date */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-text-tertiary" />
           <input
@@ -236,8 +264,22 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             className="px-3 py-1.5 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Deadline date"
           />
         </div>
+
+        {/* Deadline - Time */}
+        {deadline && (
+          <div className="flex items-center gap-2">
+            <input
+              type="time"
+              value={deadlineTime}
+              onChange={(e) => setDeadlineTime(e.target.value)}
+              className="px-3 py-1.5 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Deadline time"
+            />
+          </div>
+        )}
       </div>
 
       {/* Tags */}

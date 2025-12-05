@@ -98,7 +98,7 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
           user_id: user.id,
           name: 'Main',
           icon: '📋',
-          color: '#3b82f6',
+          color: '#e1e1e1', // Light Gray
           order: 0,
         })
         .select()
