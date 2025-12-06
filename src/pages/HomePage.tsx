@@ -139,13 +139,11 @@ export function HomePage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary mb-1 sm:mb-2">
-                    {filter === 'archived' ? 'Archived Tasks' : 'Your Tasks'}
+                    Your Tasks
                   </h2>
                   <p className="text-xs sm:text-sm md:text-base text-text-tertiary">
                     {filteredAndSortedTasks.length === 0
-                      ? filter === 'archived' 
-                        ? 'No archived tasks'
-                        : 'Start by creating your first task'
+                      ? 'Start by creating your first task'
                       : `${filteredAndSortedTasks.length} task${filteredAndSortedTasks.length !== 1 ? 's' : ''}`}
                   </p>
                 </div>

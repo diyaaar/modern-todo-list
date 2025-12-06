@@ -1,4 +1,4 @@
-import { Search, Filter, SortAsc, Calendar, Tag, Archive } from 'lucide-react'
+import { Search, Filter, SortAsc, Tag } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useTags } from '../contexts/TagsContext'
 import { TaskFilter, TaskSort } from '../types/task'
@@ -13,10 +13,6 @@ export function TaskFilters() {
     setSearchQuery,
     selectedTagIds,
     setSelectedTagIds,
-    dateRangeStart,
-    setDateRangeStart,
-    dateRangeEnd,
-    setDateRangeEnd,
   } = useTasks()
   const { tags } = useTags()
 
@@ -52,35 +48,9 @@ export function TaskFilters() {
             <option value="all">All Tasks</option>
             <option value="active">Active</option>
             <option value="completed">Completed</option>
-            <option value="archived">Archived</option>
           </select>
-          {filter === 'archived' && (
-            <span className="text-xs text-primary font-medium">(Viewing Archive)</span>
-          )}
         </div>
 
-        {/* Archive Toggle Button - More prominent way to switch to archive view */}
-        <button
-          onClick={() => {
-            const newFilter = filter === 'archived' ? 'all' : 'archived'
-            console.log('[TaskFilters] Switching to filter:', newFilter)
-            setFilter(newFilter)
-          }}
-          className={`
-            flex items-center gap-2 px-3 py-2.5 sm:py-2 min-h-[44px] rounded-lg text-sm font-medium transition-all touch-manipulation
-            focus:outline-none focus:ring-2 focus:ring-primary active:scale-95
-            ${
-              filter === 'archived'
-                ? 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-lg'
-                : 'bg-background-tertiary text-text-primary hover:bg-background-tertiary/80 active:bg-background-tertiary/90 border border-background-tertiary hover:border-primary/50'
-            }
-          `}
-          aria-label={filter === 'archived' ? 'Show active tasks' : 'Show archived tasks'}
-          title={filter === 'archived' ? 'Show active tasks' : 'Show archived tasks'}
-        >
-          <Archive className="w-4 h-4" />
-          <span>{filter === 'archived' ? 'Active' : 'Archive'}</span>
-        </button>
 
         {/* Sort */}
         <div className="flex items-center gap-2">
@@ -148,43 +118,6 @@ export function TaskFilters() {
         </div>
       )}
 
-      {/* Date Range Filter */}
-      <div className="mt-4 pt-4 border-t border-background-tertiary">
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="w-4 h-4 text-text-tertiary" />
-          <span className="text-sm text-text-secondary">Date range:</span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="date"
-            value={dateRangeStart || ''}
-            onChange={(e) => setDateRangeStart(e.target.value || null)}
-            placeholder="Start date"
-            className="px-3 py-2 sm:py-1.5 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
-            aria-label="Filter by start date"
-          />
-          <span className="text-text-tertiary text-sm">to</span>
-          <input
-            type="date"
-            value={dateRangeEnd || ''}
-            onChange={(e) => setDateRangeEnd(e.target.value || null)}
-            placeholder="End date"
-            className="px-3 py-2 sm:py-1.5 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
-            aria-label="Filter by end date"
-          />
-          {(dateRangeStart || dateRangeEnd) && (
-            <button
-              onClick={() => {
-                setDateRangeStart(null)
-                setDateRangeEnd(null)
-              }}
-              className="px-2 py-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

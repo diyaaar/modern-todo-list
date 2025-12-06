@@ -15,7 +15,7 @@ export function UndoSnackbar({
   onUndo,
   onClose,
   duration = 3000,
-  message = 'Task archived',
+  message = 'Task deleted',
 }: UndoSnackbarProps) {
   const [progress, setProgress] = useState(100)
 

@@ -15,7 +15,6 @@ import {
   Paperclip,
   X,
   Folder,
-  Archive,
   Loader2,
 } from 'lucide-react'
 import { TaskWithSubtasks } from '../types/task'
@@ -48,7 +47,7 @@ interface TaskProps {
 }
 
 export function Task({ task, depth = 0 }: TaskProps) {
-  const { toggleTaskComplete, deleteTask, archiveTask, unarchiveTask, addAISuggestions, updateTask } = useTasks()
+  const { toggleTaskComplete, deleteTask, addAISuggestions, updateTask } = useTasks()
   const { getTaskTags, removeTagFromTask } = useTags()
   const { getTaskLinks, addTaskLink, updateTaskLink, deleteTaskLink, getTaskImages, addTaskImage, deleteTaskImage } = useAttachments()
   const { showToast } = useToast()
@@ -258,27 +257,6 @@ export function Task({ task, depth = 0 }: TaskProps) {
     await deleteTask(task.id)
   }
 
-  const handleArchive = async () => {
-    try {
-      // Store task title and current state for the snackbar message
-      const taskTitle = task.title
-      
-      // Archive the task first
-      await archiveTask(task.id)
-      
-      // Show snackbar after successful archive with undo action
-      showSnackbar({
-        id: task.id,
-        message: `Task "${taskTitle}" archived`,
-        onUndo: async () => {
-          await unarchiveTask(task.id)
-        },
-      })
-    } catch (err) {
-      console.error('Error archiving task:', err)
-      // Don't show snackbar if archive failed
-    }
-  }
 
 
   const handleAddToCalendar = async () => {
@@ -728,28 +706,6 @@ export function Task({ task, depth = 0 }: TaskProps) {
                 >
                   <Plus className="w-4 h-4 text-text-tertiary" />
                 </button>
-                {/* Archive button - show on hover for completed tasks */}
-                {task.completed && !task.archived && (
-                  <button
-                    onClick={handleArchive}
-                    className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary group/archive"
-                    title="Archive task"
-                    aria-label="Archive task"
-                  >
-                    <Archive className="w-4 h-4 text-text-tertiary group-hover/archive:text-primary transition-colors" />
-                  </button>
-                )}
-                {/* Unarchive button - show when viewing archived tasks */}
-                {task.archived && (
-                  <button
-                    onClick={() => unarchiveTask(task.id)}
-                    className="p-1.5 hover:bg-primary/10 active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary group/unarchive"
-                    title="Unarchive task"
-                    aria-label="Unarchive task"
-                  >
-                    <Archive className="w-4 h-4 text-primary" />
-                  </button>
-                )}
                 <button
                   onClick={() => setIsEditing(true)}
                   className="p-1.5 hover:bg-background-tertiary active:scale-95 rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
