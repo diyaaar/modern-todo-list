@@ -53,8 +53,8 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
 
             {/* Sidebar Panel */}
             <motion.div
-              initial={{ width: isExpanded ? 256 : 0 }}
-              animate={{ width: isExpanded ? 256 : 0 }}
+              initial={{ width: isExpanded ? 256 : 48 }}
+              animate={{ width: isExpanded ? 256 : 48 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className={`
                 fixed left-0 top-0 bottom-0 z-50
@@ -63,18 +63,23 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                 md:relative md:shadow-none
               `}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0">
+              {/* Header - Always visible, even when collapsed */}
+              <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0 min-w-[48px]">
                 {isExpanded && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold text-text-primary">Calendars</h3>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="flex items-center gap-2 overflow-hidden"
+                  >
+                    <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
+                    <h3 className="text-lg font-bold text-text-primary whitespace-nowrap">Calendars</h3>
+                  </motion.div>
                 )}
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                   <button
                     onClick={handleToggle}
-                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors flex-shrink-0"
                     aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
                   >
                     {isExpanded ? (
@@ -85,7 +90,7 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                   </button>
                   <button
                     onClick={onToggle}
-                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors md:hidden"
+                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors md:hidden flex-shrink-0"
                     aria-label="Close"
                   >
                     <X className="w-5 h-5 text-text-tertiary" />

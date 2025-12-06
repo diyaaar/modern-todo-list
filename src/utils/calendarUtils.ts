@@ -108,14 +108,23 @@ export function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[]
 
 /**
  * Get current time position in timeline
+ * Uses local time to ensure accurate positioning
  */
 export function getCurrentTimePosition(startHour = 8): number | null {
   const now = new Date()
-  const currentMinutes = getHours(now) * 60 + getMinutes(now) - startHour * 60
-  const dayMinutes = (22 - startHour) * 60
   
+  // Get local time components (not UTC)
+  const localHours = now.getHours()
+  const localMinutes = now.getMinutes()
+  
+  // Calculate minutes from start of day (startHour:00)
+  const currentMinutes = (localHours * 60 + localMinutes) - (startHour * 60)
+  const dayMinutes = (22 - startHour) * 60 // 8 AM to 10 PM = 14 hours = 840 minutes
+  
+  // Only show indicator if within the visible time range
   if (currentMinutes < 0 || currentMinutes > dayMinutes) return null
   
+  // Return position as percentage (0-100%)
   return (currentMinutes / dayMinutes) * 100
 }
 

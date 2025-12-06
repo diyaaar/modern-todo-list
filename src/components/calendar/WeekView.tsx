@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
@@ -21,12 +21,27 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const timeSlots = generateTimeSlots(8, 22)
   const weekEvents = getEventsForWeek(events, weekStart)
-  const currentTimePosition = getCurrentTimePosition(8)
   const isCurrentWeek = weekDays.some(day => isToday(day))
   const [overlapModal, setOverlapModal] = useState<{
     events: CalendarEvent[]
     timeSlot: string
   } | null>(null)
+  const [currentTimePosition, setCurrentTimePosition] = useState<number | null>(getCurrentTimePosition(8))
+
+  // Update current time position every minute
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTimePosition(getCurrentTimePosition(8))
+    }
+    
+    // Update immediately
+    updateTime()
+    
+    // Update every minute
+    const interval = setInterval(updateTime, 60000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   if (loading) {
     return (
