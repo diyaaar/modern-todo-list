@@ -373,6 +373,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           deadline: taskToInsert.deadline ?? null,
           completed: taskToInsert.completed ?? false,
           completed_at: null,
+          archived: false, // Always false since archive feature is removed
           position: taskToInsert.position ?? null,
           background_image_url: taskToInsert.background_image_url ?? null,
           background_image_display_mode: taskToInsert.background_image_display_mode ?? null,
