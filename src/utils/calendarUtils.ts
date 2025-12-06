@@ -108,36 +108,43 @@ export function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[]
 
 /**
  * Get current time position in timeline
- * Uses local time to ensure accurate positioning based on user's timezone (Europe/Istanbul, UTC+3)
+ * Explicitly uses Istanbul timezone (Europe/Istanbul, UTC+3) for accurate time display
  * 
  * This function calculates the vertical position (as percentage) where the current time
  * indicator should appear in the Week view timeline.
  */
 export function getCurrentTimePosition(startHour = 8): number | null {
-  // Create a new Date object - this uses the browser's local timezone
   const now = new Date()
   
-  // Get timezone offset in minutes (negative for timezones ahead of UTC)
-  // Istanbul is UTC+3, so getTimezoneOffset() should return -180 (3 hours * 60 minutes)
-  const timezoneOffset = now.getTimezoneOffset() // Returns offset in minutes (UTC - local)
-  const timezoneOffsetHours = -timezoneOffset / 60 // Convert to hours (Istanbul should be +3)
+  // EXPLICITLY get Istanbul time using Intl API
+  // This ensures we always use Istanbul timezone regardless of browser settings
+  const istanbulTimeString = now.toLocaleString('en-US', { 
+    timeZone: 'Europe/Istanbul', 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit', 
+    hour12: false 
+  })
   
-  // Get UTC time components for reference
+  // Parse Istanbul time string (format: "HH:MM:SS")
+  const [hoursStr, minutesStr, secondsStr] = istanbulTimeString.split(':')
+  const istanbulHours = parseInt(hoursStr, 10)
+  const istanbulMinutes = parseInt(minutesStr, 10)
+  const istanbulSeconds = parseInt(secondsStr, 10)
+  
+  // Also get browser local time for comparison/debugging
+  const localHours = now.getHours()
+  const localMinutes = now.getMinutes()
+  const localSeconds = now.getSeconds()
   const utcHours = now.getUTCHours()
   const utcMinutes = now.getUTCMinutes()
-  const utcSeconds = now.getUTCSeconds()
+  const timezoneOffset = now.getTimezoneOffset()
+  const timezoneOffsetHours = -timezoneOffset / 60
   
-  // Get local time components - these are what we want to use
-  // These methods return values in the browser's local timezone
-  const localHours = now.getHours() // 0-23 in local time
-  const localMinutes = now.getMinutes() // 0-59 in local time
-  const localSeconds = now.getSeconds() // 0-59 in local time
+  // Calculate total minutes from midnight using ISTANBUL time
+  const totalMinutesFromMidnight = istanbulHours * 60 + istanbulMinutes + (istanbulSeconds / 60)
   
-  // Calculate total minutes from midnight (local time)
-  // Include seconds for more precise positioning
-  const totalMinutesFromMidnight = localHours * 60 + localMinutes + (localSeconds / 60)
-  
-  // Calculate minutes from start of visible day (startHour:00 in local time)
+  // Calculate minutes from start of visible day (startHour:00 in Istanbul time)
   const startMinutes = startHour * 60
   const currentMinutes = totalMinutesFromMidnight - startMinutes
   const dayMinutes = (22 - startHour) * 60 // 8 AM to 10 PM = 14 hours = 840 minutes
@@ -147,17 +154,16 @@ export function getCurrentTimePosition(startHour = 8): number | null {
   
   // Comprehensive debugging
   console.log('[Time Indicator Debug]', {
-    'UTC Time': `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}:${utcSeconds.toString().padStart(2, '0')}`,
-    'Local Time': `${localHours.toString().padStart(2, '0')}:${localMinutes.toString().padStart(2, '0')}:${localSeconds.toString().padStart(2, '0')}`,
-    'Timezone Offset': `${timezoneOffsetHours >= 0 ? '+' : ''}${timezoneOffsetHours} hours (${timezoneOffset} minutes)`,
-    'Total Minutes from Midnight': totalMinutesFromMidnight.toFixed(2),
+    'UTC Time': `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`,
+    'Browser Local Time': `${localHours.toString().padStart(2, '0')}:${localMinutes.toString().padStart(2, '0')}:${localSeconds.toString().padStart(2, '0')}`,
+    'Istanbul Time (EXPLICIT)': `${istanbulHours.toString().padStart(2, '0')}:${istanbulMinutes.toString().padStart(2, '0')}:${istanbulSeconds.toString().padStart(2, '0')}`,
+    'Browser Timezone Offset': `${timezoneOffsetHours >= 0 ? '+' : ''}${timezoneOffsetHours} hours`,
+    'Using Istanbul Time': 'YES (explicit)',
+    'Total Minutes from Midnight (Istanbul)': totalMinutesFromMidnight.toFixed(2),
     'Start Hour': startHour,
     'Current Minutes from Start': currentMinutes.toFixed(2),
     'Day Minutes (8 AM - 10 PM)': dayMinutes,
     'Position Percentage': `${position.toFixed(2)}%`,
-    'ISO String': now.toISOString(),
-    'Locale String': now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }),
-    'Istanbul Time (via Intl)': new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   })
   
   // Only show indicator if within the visible time range
@@ -174,7 +180,7 @@ export function getCurrentTimePosition(startHour = 8): number | null {
   // Ensure position is within bounds (0-100%)
   const finalPosition = Math.max(0, Math.min(100, position))
   
-  console.log('[Time Indicator] Final position:', finalPosition + '%')
+  console.log('[Time Indicator] Final position:', finalPosition.toFixed(2) + '%', `(Istanbul time: ${istanbulHours}:${istanbulMinutes.toString().padStart(2, '0')})`)
   
   return finalPosition
 }
