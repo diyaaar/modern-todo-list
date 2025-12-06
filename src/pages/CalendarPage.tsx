@@ -39,8 +39,6 @@ export function CalendarPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars, updateCurrentDate } = useCalendar()
   const { showToast } = useToast()
-  const touchStartX = useRef<number | null>(null)
-  const touchStartY = useRef<number | null>(null)
   const calendarRef = useRef<HTMLDivElement>(null)
 
   // Load data once on mount or when authentication changes
@@ -246,8 +244,6 @@ export function CalendarPage() {
           duration: 0.35,
           ease: [0.4, 0.0, 0.2, 1],
         }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
       {/* Calendar Header */}
       <motion.div

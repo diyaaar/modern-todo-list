@@ -18,7 +18,7 @@ export function TaskFilters() {
 
   return (
     <div className="bg-background-secondary border border-background-tertiary rounded-lg p-3 sm:p-4 mb-6">
-      <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+      <div className="flex flex-row gap-3 md:gap-4 flex-wrap">
         {/* Search */}
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none" />

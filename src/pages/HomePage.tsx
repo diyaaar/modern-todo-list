@@ -18,55 +18,20 @@ type ViewMode = 'tasks' | 'calendar'
 
 export function HomePage() {
   const { loading, error, filteredAndSortedTasks } = useTasks()
-  const { workspaces, currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaces()
+  const { workspaces, currentWorkspaceId } = useWorkspaces()
   const { currentAction, isOpen, closeSnackbar } = useUndoSnackbar()
   const [showNewTaskForm, setShowNewTaskForm] = useState(false)
   const [showPhotoRecognition, setShowPhotoRecognition] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('tasks')
-  const touchStartX = useRef<number | null>(null)
 
   const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId)
 
-  // Mobile swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-
-    const touchEndX = e.changedTouches[0].clientX
-    const diff = touchStartX.current - touchEndX
-    const threshold = 50 // Minimum swipe distance
-
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0) {
-        // Swipe left - next workspace
-        const currentIndex = workspaces.findIndex((w) => w.id === currentWorkspaceId)
-        if (currentIndex < workspaces.length - 1) {
-          setCurrentWorkspaceId(workspaces[currentIndex + 1].id)
-        }
-      } else {
-        // Swipe right - previous workspace
-        const currentIndex = workspaces.findIndex((w) => w.id === currentWorkspaceId)
-        if (currentIndex > 0) {
-          setCurrentWorkspaceId(workspaces[currentIndex - 1].id)
-        }
-      }
-    }
-
-    touchStartX.current = null
-  }
 
   // Don't show full-page skeleton during workspace transitions
   // Keep existing content visible for smooth animation
 
   return (
-    <div
-      className="relative min-h-screen"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="relative min-h-screen">
       {/* Subtle Gradient Background */}
       {currentWorkspace && (
         <motion.div

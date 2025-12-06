@@ -18,7 +18,19 @@ interface WeekViewProps {
 
 export function WeekView({ currentDate, events, loading, onEventClick, onDayClick, weekOptions }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, weekOptions)
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  // Show 3 days on mobile, 7 days on desktop
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  
+  const dayCount = isMobile ? 3 : 7
+  const weekDays = Array.from({ length: dayCount }, (_, i) => addDays(weekStart, i))
   const timeSlots = generateTimeSlots(8, 22)
   const weekEvents = getEventsForWeek(events, weekStart)
   const [overlapModal, setOverlapModal] = useState<{
@@ -81,7 +93,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
 
       {/* Time slots and events */}
       <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
-        <div className="grid grid-cols-8 min-w-[600px] sm:min-w-0">
+        <div className={`grid min-w-[600px] sm:min-w-0 ${isMobile ? 'grid-cols-4' : 'grid-cols-8'}`}>
           {/* Time column */}
           <div className="border-r border-background-tertiary flex-shrink-0">
             {timeSlots.map((slot) => {
