@@ -74,6 +74,7 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                     onClick={onToggle}
                     className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors flex-shrink-0 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Close sidebar"
+                    title="Close sidebar"
                   >
                     <X className="w-5 h-5 text-text-tertiary md:hidden" />
                     <ChevronLeft className="w-4 h-4 text-text-tertiary hidden md:block" />
