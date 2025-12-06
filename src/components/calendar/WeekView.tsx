@@ -32,7 +32,6 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
   // On desktop: show full week starting Monday
   const weekStart = startOfWeek(currentDate, weekOptions)
   const today = startOfDay(new Date())
-  const dayCount = isMobile ? 3 : 7
   const weekDays = isMobile 
     ? Array.from({ length: 3 }, (_, i) => addDays(today, i)) // Today + next 2 days
     : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) // Full week
