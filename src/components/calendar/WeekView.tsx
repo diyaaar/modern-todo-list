@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format, startOfWeek, addDays, isSameDay, isToday, startOfDay } from 'date-fns'
+import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
 import { generateTimeSlots, getEventsForWeek } from '../../utils/calendarUtils'
@@ -17,24 +17,8 @@ interface WeekViewProps {
 }
 
 export function WeekView({ currentDate, events, loading, onEventClick, onDayClick, weekOptions }: WeekViewProps) {
-  // Show 3 days on mobile (today + next 2 days), 7 days on desktop (week view)
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
-  
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-  
-  // On mobile: show today + next 2 days
-  // On desktop: show full week starting Monday
   const weekStart = startOfWeek(currentDate, weekOptions)
-  const today = startOfDay(new Date())
-  const weekDays = isMobile 
-    ? Array.from({ length: 3 }, (_, i) => addDays(today, i)) // Today + next 2 days
-    : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) // Full week
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const timeSlots = generateTimeSlots(8, 22)
   const weekEvents = getEventsForWeek(events, weekStart)
   const [overlapModal, setOverlapModal] = useState<{
@@ -97,7 +81,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
 
       {/* Time slots and events */}
       <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
-        <div className={`grid min-w-[600px] sm:min-w-0 ${isMobile ? 'grid-cols-4' : 'grid-cols-8'}`}>
+        <div className="grid grid-cols-8 min-w-[600px] sm:min-w-0">
           {/* Time column */}
           <div className="border-r border-background-tertiary flex-shrink-0">
             {timeSlots.map((slot) => {
