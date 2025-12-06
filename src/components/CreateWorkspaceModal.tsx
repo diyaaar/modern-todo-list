@@ -87,8 +87,11 @@ export function CreateWorkspaceModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10"
+          className="bg-background-secondary border border-background-tertiary rounded-t-2xl sm:rounded-lg shadow-xl max-w-md w-full z-10"
           onClick={(e) => e.stopPropagation()}
+          style={{
+            marginTop: 'auto', // Push to bottom on mobile
+          }}
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">

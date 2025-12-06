@@ -71,9 +71,10 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
               placeholder="you@example.com"
               disabled={loading}
+              autoComplete="email"
             />
           </div>
         </div>
@@ -89,9 +90,10 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
               placeholder="••••••••"
               disabled={loading}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
         </div>
@@ -100,7 +102,7 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full bg-primary hover:bg-primary-dark active:bg-primary-dark text-white font-semibold py-3.5 sm:py-3 px-4 min-h-[44px] rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
       >
         {loading ? (
           <>

@@ -17,6 +17,26 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Mobile touch optimizations */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on mobile buttons */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Mobile-safe overflow */
+  .overflow-x-safe {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Emoji Picker Dark Theme Override */

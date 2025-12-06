@@ -31,7 +31,7 @@ export function TaskFilters() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tasks..."
-            className="w-full pl-10 pr-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="w-full pl-10 pr-4 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base sm:text-sm"
             aria-label="Search tasks"
           />
         </div>
@@ -46,7 +46,7 @@ export function TaskFilters() {
               console.log('[TaskFilters] Filter changed to:', newFilter)
               setFilter(newFilter)
             }}
-            className="px-3 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Filter tasks by status"
           >
             <option value="all">All Tasks</option>
@@ -67,12 +67,12 @@ export function TaskFilters() {
             setFilter(newFilter)
           }}
           className={`
-            flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-            focus:outline-none focus:ring-2 focus:ring-primary
+            flex items-center gap-2 px-3 py-2.5 sm:py-2 min-h-[44px] rounded-lg text-sm font-medium transition-all touch-manipulation
+            focus:outline-none focus:ring-2 focus:ring-primary active:scale-95
             ${
               filter === 'archived'
-                ? 'bg-primary text-white hover:bg-primary-dark shadow-lg'
-                : 'bg-background-tertiary text-text-primary hover:bg-background-tertiary/80 border border-background-tertiary hover:border-primary/50'
+                ? 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-lg'
+                : 'bg-background-tertiary text-text-primary hover:bg-background-tertiary/80 active:bg-background-tertiary/90 border border-background-tertiary hover:border-primary/50'
             }
           `}
           aria-label={filter === 'archived' ? 'Show active tasks' : 'Show archived tasks'}
@@ -88,7 +88,7 @@ export function TaskFilters() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as TaskSort)}
-            className="px-3 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Sort tasks"
           >
             <option value="created">Created Date</option>
@@ -118,12 +118,12 @@ export function TaskFilters() {
                   }
                 }}
                 className={`
-                  px-2 py-1 rounded-full text-xs font-medium border transition-all
+                  px-3 py-1.5 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-0 rounded-full text-xs font-medium border transition-all touch-manipulation
                   active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary
                   ${
                     selectedTagIds.includes(tag.id)
                       ? 'border-primary'
-                      : 'border-background-tertiary hover:border-primary/50'
+                      : 'border-background-tertiary hover:border-primary/50 active:border-primary/70'
                   }
                 `}
                 style={{
@@ -160,7 +160,7 @@ export function TaskFilters() {
             value={dateRangeStart || ''}
             onChange={(e) => setDateRangeStart(e.target.value || null)}
             placeholder="Start date"
-            className="px-3 py-1.5 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="px-3 py-2 sm:py-1.5 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Filter by start date"
           />
           <span className="text-text-tertiary text-sm">to</span>
@@ -169,7 +169,7 @@ export function TaskFilters() {
             value={dateRangeEnd || ''}
             onChange={(e) => setDateRangeEnd(e.target.value || null)}
             placeholder="End date"
-            className="px-3 py-1.5 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="px-3 py-2 sm:py-1.5 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Filter by end date"
           />
           {(dateRangeStart || dateRangeEnd) && (

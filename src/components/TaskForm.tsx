@@ -218,7 +218,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Task title"
-          className="w-full px-3 py-2 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+          className="w-full px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base sm:text-sm"
           autoFocus
           required
           aria-label="Task title"
@@ -231,15 +231,15 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={3}
-          className="w-full px-3 py-2 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary resize-none transition-all"
+          className="w-full px-3 py-2.5 sm:py-2 min-h-[80px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary resize-none transition-all text-base sm:text-sm"
           aria-label="Task description"
         />
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         {/* Priority Selector */}
-        <div className="flex items-center gap-2">
-          <Flag className="w-4 h-4 text-text-tertiary" />
+        <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+          <Flag className="w-4 h-4 text-text-tertiary flex-shrink-0" />
           <select
             value={priority || ''}
             onChange={(e) =>
@@ -247,7 +247,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
                 (e.target.value as 'high' | 'medium' | 'low' | '') || null
               )
             }
-            className="px-3 py-1.5 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation"
           >
             <option value="">No priority</option>
             <option value="low">Low</option>
@@ -257,25 +257,25 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         </div>
 
         {/* Deadline - Date */}
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-text-tertiary" />
+        <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+          <Calendar className="w-4 h-4 text-text-tertiary flex-shrink-0" />
           <input
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="px-3 py-1.5 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation"
             aria-label="Deadline date"
           />
         </div>
 
         {/* Deadline - Time */}
         {deadline && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
             <input
               type="time"
               value={deadlineTime}
               onChange={(e) => setDeadlineTime(e.target.value)}
-              className="px-3 py-1.5 bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 min-h-[44px] bg-background-secondary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation"
               aria-label="Deadline time"
             />
           </div>

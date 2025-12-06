@@ -231,13 +231,13 @@ export function CalendarPage() {
   const isTodayButtonDisabled = isToday(currentDate)
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
       {/* Calendar Sidebar */}
       <CalendarSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div
         ref={calendarRef}
-        className="flex-1 space-y-6"
+        className="flex-1 space-y-4 sm:space-y-6 min-w-0"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -245,20 +245,20 @@ export function CalendarPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4"
       >
-        <div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-text-primary mb-1 sm:mb-2 truncate">
             {viewMode === 'month' && format(currentDate, 'MMMM yyyy')}
             {viewMode === 'week' && `Week of ${format(startOfWeek(currentDate, weekOptions), 'MMM d')}`}
           </h2>
-          <p className="text-sm text-text-tertiary">
+          <p className="text-xs sm:text-sm text-text-tertiary">
             {viewMode === 'month' && `${events.length} event${events.length !== 1 ? 's' : ''} this month`}
             {viewMode === 'week' && `${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length} event${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length !== 1 ? 's' : ''} this week`}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
           {/* View Mode Toggle */}
           <div className="flex items-center gap-1 bg-background-secondary border border-background-tertiary rounded-lg p-1">
             <button
@@ -411,26 +411,27 @@ export function CalendarPage() {
             className="bg-background-secondary border border-background-tertiary rounded-lg p-4 sm:p-6"
           >
             {/* Day Headers - Monday to Sunday */}
-            <div className="grid grid-cols-7 gap-2 mb-4">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
                 <div
                   key={day}
-                  className={`text-center text-sm font-semibold py-2 ${
+                  className={`text-center text-xs sm:text-sm font-semibold py-1.5 sm:py-2 ${
                     index === 5 || index === 6 ? 'text-text-tertiary' : 'text-text-secondary'
                   }`}
                 >
-                  {day}
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.substring(0, 1)}</span>
                 </div>
               ))}
             </div>
 
             {/* Calendar Days */}
             {loading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-8 sm:py-12">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {calendarDays.map((day, index) => {
                   const dayEvents = getEventsForDate(day)
                   const isCurrentMonth = isSameMonth(day, currentDate)
@@ -446,7 +447,7 @@ export function CalendarPage() {
                       transition={{ delay: index * 0.01 }}
                       onClick={() => handleDayClick(day)}
                       className={`
-                        min-h-[100px] sm:min-h-[120px] p-2 sm:p-3 rounded-lg border transition-all duration-200 cursor-pointer
+                        min-h-[60px] sm:min-h-[100px] md:min-h-[120px] p-1.5 sm:p-2 md:p-3 rounded-lg border transition-all duration-200 cursor-pointer touch-manipulation
                         ${isCurrentMonth
                           ? isWeekendDay
                             ? calendarTheme.colors.weekend.bg
@@ -458,7 +459,7 @@ export function CalendarPage() {
                           : 'border-background-tertiary hover:border-primary/50'
                         }
                         ${isPastDay ? calendarTheme.colors.past.opacity : ''}
-                        hover:bg-background-tertiary/80 hover:shadow-sm
+                        hover:bg-background-tertiary/80 active:bg-background-tertiary/90 hover:shadow-sm
                         focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                       `}
                       role="button"

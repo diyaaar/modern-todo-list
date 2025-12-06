@@ -69,12 +69,12 @@ export function EventBlock({ event, variant = 'month', onClick }: EventBlockProp
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
       onClick={onClick}
-      className={`
-        p-2 rounded-md cursor-pointer border-l-4
-        ${calendarTheme.animations.eventHover}
-        ${calendarTheme.shadows.event}
-        group
-      `}
+        className={`
+          p-1.5 sm:p-2 rounded-md cursor-pointer border-l-4 touch-manipulation min-h-[44px]
+          ${calendarTheme.animations.eventHover}
+          ${calendarTheme.shadows.event}
+          group
+        `}
       style={{
         backgroundColor: `${eventColor}15`,
         borderLeftColor: eventColor,

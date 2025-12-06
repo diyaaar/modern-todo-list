@@ -99,14 +99,14 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
               `}
             >
               <div className="text-center">
-                <div className={`text-xs font-semibold uppercase tracking-wide ${isTodayDay ? 'text-primary' : 'text-text-tertiary'}`}>
+                <div className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wide ${isTodayDay ? 'text-primary' : 'text-text-tertiary'}`}>
                   {format(day, 'EEE')}
                 </div>
-                <div className={`text-xl font-bold mt-1.5 ${isTodayDay ? 'text-primary' : 'text-text-primary'}`}>
+                <div className={`text-lg sm:text-xl font-bold mt-1 sm:mt-1.5 ${isTodayDay ? 'text-primary' : 'text-text-primary'}`}>
                   {format(day, 'd')}
                 </div>
                 {dayEvents.length > 0 && (
-                  <div className="text-xs text-text-tertiary mt-1.5 font-medium">
+                  <div className="text-[10px] sm:text-xs text-text-tertiary mt-1 sm:mt-1.5 font-medium">
                     {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
                   </div>
                 )}
@@ -117,7 +117,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
       </div>
 
       {/* Time slots and events */}
-      <div className="relative overflow-y-auto max-h-[70vh]">
+      <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
         {/* Current time indicator - only show if viewing today */}
         {isCurrentWeek && isViewingToday && currentTimePosition !== null && (
           <div
@@ -133,21 +133,21 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
           </div>
         )}
 
-        <div className="grid grid-cols-8">
+        <div className="grid grid-cols-8 min-w-[600px] sm:min-w-0">
           {/* Time column */}
-          <div className="border-r border-background-tertiary">
+          <div className="border-r border-background-tertiary flex-shrink-0">
             {timeSlots.map((slot) => {
               const isHour = slot.endsWith(':00')
               return (
                 <div
                   key={slot}
                   className={`
-                    border-b border-background-tertiary/50 h-12 flex items-start justify-end pr-2 pt-1
+                    border-b border-background-tertiary/50 h-10 sm:h-12 flex items-start justify-end pr-1 sm:pr-2 pt-1
                     ${isHour ? 'border-b-background-tertiary' : ''}
                   `}
                 >
                   {isHour && (
-                    <span className="text-xs text-text-tertiary font-medium">{slot}</span>
+                    <span className="text-[10px] sm:text-xs text-text-tertiary font-medium">{slot}</span>
                   )}
                 </div>
               )
@@ -177,7 +177,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
                     <div
                       key={slot}
                       className={`
-                        border-b border-background-tertiary/50 h-12
+                        border-b border-background-tertiary/50 h-10 sm:h-12
                         ${isHour ? 'border-b-background-tertiary' : ''}
                       `}
                     />

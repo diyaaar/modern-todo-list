@@ -90,42 +90,42 @@ export function HomePage() {
       <WorkspaceNavigation />
 
       {/* Tab Navigation */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-4">
-        <div className="flex items-center justify-center mb-6">
-          <div className="inline-flex items-center gap-2 bg-background-secondary border border-background-tertiary rounded-lg p-1">
+      <div className="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4">
+        <div className="flex items-center justify-center mb-4 sm:mb-6">
+          <div className="inline-flex items-center gap-1 sm:gap-2 bg-background-secondary border border-background-tertiary rounded-lg p-0.5 sm:p-1 w-full sm:w-auto max-w-[95vw] sm:max-w-none">
             <button
               onClick={() => setViewMode('tasks')}
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200
+                flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-md transition-all duration-200 min-h-[44px] flex-1 sm:flex-initial touch-manipulation
                 ${viewMode === 'tasks'
                   ? 'bg-primary text-white shadow-lg'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary active:bg-background-tertiary/80'
                 }
               `}
               aria-label="Tasks view"
             >
-              <List className="w-4 h-4" />
+              <List className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="text-sm font-medium">Tasks</span>
             </button>
             <button
               onClick={() => setViewMode('calendar')}
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200
+                flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-md transition-all duration-200 min-h-[44px] flex-1 sm:flex-initial touch-manipulation
                 ${viewMode === 'calendar'
                   ? 'bg-primary text-white shadow-lg'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary active:bg-background-tertiary/80'
                 }
               `}
               aria-label="Calendar view"
             >
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="text-sm font-medium">Calendar</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* View Content */}
         <AnimatePresence mode="wait">
           {viewMode === 'tasks' ? (
@@ -136,12 +136,12 @@ export function HomePage() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary mb-1 sm:mb-2">
                     {filter === 'archived' ? 'Archived Tasks' : 'Your Tasks'}
                   </h2>
-                  <p className="text-sm sm:text-base text-text-tertiary">
+                  <p className="text-xs sm:text-sm md:text-base text-text-tertiary">
                     {filteredAndSortedTasks.length === 0
                       ? filter === 'archived' 
                         ? 'No archived tasks'
@@ -149,7 +149,7 @@ export function HomePage() {
                       : `${filteredAndSortedTasks.length} task${filteredAndSortedTasks.length !== 1 ? 's' : ''}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => setShowPhotoRecognition(true)}
                     className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-background-tertiary hover:bg-background-tertiary/80 active:scale-95 text-text-primary rounded-lg transition-all duration-200 font-medium"

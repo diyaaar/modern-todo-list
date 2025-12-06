@@ -44,8 +44,11 @@ export function EventDetailsModal({ isOpen, onClose, event }: EventDetailsModalP
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-background-secondary border border-background-tertiary rounded-t-2xl sm:rounded-lg shadow-xl w-full max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
+          style={{
+            marginTop: 'auto', // Push to bottom on mobile
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-background-tertiary">

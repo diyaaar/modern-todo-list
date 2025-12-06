@@ -102,12 +102,12 @@ export function WorkspaceNavigation() {
 
   return (
     <>
-      <div className="sticky top-0 z-40 pt-4 pb-2">
-        <div className="flex justify-center">
+      <div className="sticky top-0 z-40 pt-2 sm:pt-3 md:pt-4 pb-2">
+        <div className="flex justify-center px-2">
           <motion.div
             layout
             initial={false}
-            className="inline-flex items-center gap-1 px-4 py-2 bg-background-secondary/80 backdrop-blur-md border border-background-tertiary rounded-2xl shadow-lg max-w-[90vw] overflow-hidden"
+            className="inline-flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-background-secondary/80 backdrop-blur-md border border-background-tertiary rounded-xl sm:rounded-2xl shadow-lg max-w-[95vw] sm:max-w-[90vw] overflow-hidden"
             style={{
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             }}
@@ -116,10 +116,10 @@ export function WorkspaceNavigation() {
             <button
               onClick={handlePrevious}
               disabled={!canGoPrevious}
-              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+              className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Previous workspace"
             >
-              <ChevronLeft className="w-4 h-4 text-text-tertiary" />
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
 
             {/* Workspace Tabs */}
@@ -142,16 +142,16 @@ export function WorkspaceNavigation() {
                       onDoubleClick={() => handleEdit(workspace.id)}
                       onContextMenu={(e) => handleContextMenu(e, workspace.id)}
                       className={`
-                        flex items-center gap-2 px-4 py-2 rounded-xl transition-all
+                        flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition-all
                         min-h-[44px] touch-manipulation relative
-                        ${isActive ? '' : 'hover:bg-background-tertiary/50'}
+                        ${isActive ? '' : 'hover:bg-background-tertiary/50 active:bg-background-tertiary/70'}
                       `}
                       style={{
                         color: isActive ? workspace.color : undefined,
                       }}
                     >
-                      <span className="text-lg">{workspace.icon}</span>
-                      <span className="text-sm font-medium whitespace-nowrap">{workspace.name}</span>
+                      <span className="text-base sm:text-lg flex-shrink-0">{workspace.icon}</span>
+                      <span className="text-xs sm:text-sm font-medium whitespace-nowrap truncate max-w-[100px] sm:max-w-none">{workspace.name}</span>
                       {isActive && (
                         <motion.div
                           layoutId="activeTabIndicator"
@@ -176,10 +176,10 @@ export function WorkspaceNavigation() {
             <button
               onClick={handleNext}
               disabled={!canGoNext}
-              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+              className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Next workspace"
             >
-              <ChevronRight className="w-4 h-4 text-text-tertiary" />
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
 
             {/* Create Button */}
@@ -188,10 +188,10 @@ export function WorkspaceNavigation() {
                 setEditingWorkspaceId(null)
                 setShowCreateModal(true)
               }}
-              className="flex-shrink-0 p-1.5 hover:bg-background-tertiary rounded-lg transition-all hover:scale-105 active:scale-95"
+              className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Create new workspace"
             >
-              <Plus className="w-5 h-5 text-text-tertiary" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
           </motion.div>
         </div>
@@ -208,21 +208,21 @@ export function WorkspaceNavigation() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed z-50 bg-background-secondary border border-background-tertiary rounded-lg shadow-xl py-1 min-w-[120px]"
+            className="fixed z-50 bg-background-secondary border border-background-tertiary rounded-lg shadow-xl py-1 min-w-[140px] sm:min-w-[120px]"
             style={{
-              left: `${contextMenu.x}px`,
-              top: `${contextMenu.y}px`,
+              left: `${Math.min(contextMenu.x, window.innerWidth - 160)}px`,
+              top: `${Math.min(contextMenu.y, window.innerHeight - 100)}px`,
             }}
           >
             <button
               onClick={() => handleEdit(contextMenu.workspaceId)}
-              className="w-full px-4 py-2 text-left text-sm text-text-secondary hover:bg-background-tertiary transition-colors"
+              className="w-full px-4 py-3 sm:py-2 text-left text-sm min-h-[44px] flex items-center text-text-secondary hover:bg-background-tertiary active:bg-background-tertiary/80 transition-colors touch-manipulation"
             >
               Edit
             </button>
             <button
               onClick={() => handleDeleteClick(contextMenu.workspaceId)}
-              className="w-full px-4 py-2 text-left text-sm text-danger hover:bg-background-tertiary transition-colors"
+              className="w-full px-4 py-3 sm:py-2 text-left text-sm min-h-[44px] flex items-center text-danger hover:bg-background-tertiary active:bg-background-tertiary/80 transition-colors touch-manipulation"
             >
               Delete
             </button>

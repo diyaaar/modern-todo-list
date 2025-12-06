@@ -60,7 +60,8 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                 fixed left-0 top-0 bottom-0 z-50
                 bg-background-secondary border-r border-background-tertiary
                 shadow-xl flex flex-col overflow-hidden
-                md:relative md:shadow-none
+                md:relative md:shadow-none md:z-auto
+                w-[280px] sm:w-[256px] md:w-auto
               `}
             >
               {/* Header - Always visible, even when collapsed */}
