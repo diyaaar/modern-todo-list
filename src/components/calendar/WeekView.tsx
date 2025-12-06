@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
-import { generateTimeSlots, getEventsForWeek, getCurrentTimePosition } from '../../utils/calendarUtils'
+import { generateTimeSlots, getEventsForWeek } from '../../utils/calendarUtils'
 import { calculateEventPositions } from '../../utils/eventOverlap'
 import { OverlapEventsModal } from './OverlapEventsModal'
 import { Loader2 } from 'lucide-react'
@@ -21,47 +21,10 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const timeSlots = generateTimeSlots(8, 22)
   const weekEvents = getEventsForWeek(events, weekStart)
-  const isCurrentWeek = weekDays.some(day => isToday(day))
   const [overlapModal, setOverlapModal] = useState<{
     events: CalendarEvent[]
     timeSlot: string
   } | null>(null)
-  // Get today's date in local timezone for comparison
-  const today = new Date()
-  const isViewingToday = weekDays.some(day => {
-    return day.getDate() === today.getDate() &&
-           day.getMonth() === today.getMonth() &&
-           day.getFullYear() === today.getFullYear()
-  })
-  
-  const [currentTimePosition, setCurrentTimePosition] = useState<number | null>(() => {
-    // Only show indicator if viewing current week and today
-    if (isCurrentWeek && isViewingToday) {
-      return getCurrentTimePosition(8)
-    }
-    return null
-  })
-
-  // Update current time position every minute (only if viewing current week and today)
-  useEffect(() => {
-    if (!isCurrentWeek || !isViewingToday) {
-      setCurrentTimePosition(null)
-      return
-    }
-    
-    const updateTime = () => {
-      const position = getCurrentTimePosition(8, 22)
-      setCurrentTimePosition(position)
-    }
-    
-    // Update immediately
-    updateTime()
-    
-    // Update every minute
-    const interval = setInterval(updateTime, 60000)
-    
-    return () => clearInterval(interval)
-  }, [isCurrentWeek, isViewingToday])
 
   if (loading) {
     return (
@@ -118,21 +81,6 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
 
       {/* Time slots and events */}
       <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
-        {/* Current time indicator - only show if viewing today */}
-        {isCurrentWeek && isViewingToday && currentTimePosition !== null && (
-          <div
-            className="absolute left-0 right-0 z-10 pointer-events-none"
-            style={{ top: `${currentTimePosition}%` }}
-          >
-            <div className="flex items-center">
-              <div className="w-12 flex-shrink-0 flex items-center justify-end pr-2">
-                <div className="w-2 h-2 rounded-full bg-danger shadow-sm"></div>
-              </div>
-              <div className="flex-1 h-0.5 bg-danger"></div>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-8 min-w-[600px] sm:min-w-0">
           {/* Time column */}
           <div className="border-r border-background-tertiary flex-shrink-0">

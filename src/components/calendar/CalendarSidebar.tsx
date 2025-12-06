@@ -27,72 +27,73 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
 
   return (
     <>
-      {/* Mobile Toggle Button (when sidebar is closed) */}
+      {/* Mobile Toggle Button - Always visible on mobile when sidebar is closed */}
       {!isOpen && (
-        <button
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
           onClick={onToggle}
-          className="fixed left-4 top-1/2 -translate-y-1/2 z-40 p-2 bg-background-secondary border border-background-tertiary rounded-lg shadow-lg hover:bg-background-tertiary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary md:hidden"
+          className="fixed left-2 top-20 z-50 p-3 bg-background-secondary border border-background-tertiary rounded-lg shadow-lg hover:bg-background-tertiary active:bg-background-tertiary/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
           aria-label="Open calendar list"
         >
-          <ChevronRight className="w-5 h-5 text-text-primary" />
-        </button>
+          <Menu className="w-5 h-5 text-text-primary" />
+        </motion.button>
       )}
 
       {/* Sidebar */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Mobile Backdrop */}
+            {/* Mobile Backdrop - Click to close */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onToggle}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
             />
 
             {/* Sidebar Panel */}
             <motion.div
-              initial={{ width: isExpanded ? 256 : 48 }}
-              animate={{ width: isExpanded ? 256 : 48 }}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className={`
                 fixed left-0 top-0 bottom-0 z-50
                 bg-background-secondary border-r border-background-tertiary
                 shadow-xl flex flex-col overflow-hidden
-                md:relative md:shadow-none md:z-auto
-                w-[280px] sm:w-[256px] md:w-auto
+                w-[50vw] max-w-[280px] min-w-[240px]
+                md:relative md:shadow-none md:z-auto md:w-[256px]
+                md:translate-x-0 md:initial-none
               `}
+              onClick={(e) => e.stopPropagation()}
             >
-              {/* Header - Always visible, even when collapsed */}
-              <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0 min-w-[48px]">
-                {isExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="flex items-center gap-2 overflow-hidden"
-                  >
-                    <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
-                    <h3 className="text-lg font-bold text-text-primary whitespace-nowrap">Calendars</h3>
-                  </motion.div>
-                )}
-                <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
+                  <h3 className="text-lg font-bold text-text-primary">Calendars</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Desktop: Collapse/Expand button */}
                   <button
                     onClick={handleToggle}
-                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors flex-shrink-0"
+                    className="hidden md:flex p-1.5 hover:bg-background-tertiary rounded-lg transition-colors flex-shrink-0"
                     aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
                   >
                     {isExpanded ? (
                       <ChevronLeft className="w-4 h-4 text-text-tertiary" />
                     ) : (
-                      <Menu className="w-4 h-4 text-text-tertiary" />
+                      <ChevronRight className="w-4 h-4 text-text-tertiary" />
                     )}
                   </button>
+                  {/* Mobile: Close button */}
                   <button
                     onClick={onToggle}
-                    className="p-1.5 hover:bg-background-tertiary rounded-lg transition-colors md:hidden flex-shrink-0"
-                    aria-label="Close"
+                    className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors md:hidden flex-shrink-0 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label="Close sidebar"
                   >
                     <X className="w-5 h-5 text-text-tertiary" />
                   </button>
@@ -100,15 +101,7 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
               </div>
 
               {/* Calendar List */}
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 overflow-y-auto p-4 space-y-2"
-                  >
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {loading ? (
                   <div className="text-sm text-text-tertiary text-center py-8">
                     Loading calendars...
@@ -163,23 +156,14 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                     )
                   })
                 )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              </div>
 
               {/* Footer Info */}
-              {isExpanded && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="p-4 border-t border-background-tertiary flex-shrink-0"
-                >
-                  <p className="text-xs text-text-tertiary text-center">
-                    {selectedCalendarIds.length} of {calendars.length} calendars shown
-                  </p>
-                </motion.div>
-              )}
+              <div className="p-4 border-t border-background-tertiary flex-shrink-0">
+                <p className="text-xs text-text-tertiary text-center">
+                  {selectedCalendarIds.length} of {calendars.length} calendars shown
+                </p>
+              </div>
             </motion.div>
           </>
         )}

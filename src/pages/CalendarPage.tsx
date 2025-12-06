@@ -35,7 +35,14 @@ export function CalendarPage() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Sidebar closed by default on mobile, open on desktop
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Check if we're on mobile (screen width < 768px)
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars, updateCurrentDate } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
