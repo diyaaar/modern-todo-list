@@ -145,26 +145,50 @@ export function getCurrentTimePosition(startHour = 8): number | null {
   const totalMinutesFromMidnight = istanbulHours * 60 + istanbulMinutes + (istanbulSeconds / 60)
   
   // Calculate minutes from start of visible day (startHour:00 in Istanbul time)
-  const startMinutes = startHour * 60
+  const startMinutes = startHour * 60 // 8 AM = 480 minutes from midnight
   const currentMinutes = totalMinutesFromMidnight - startMinutes
-  const dayMinutes = (22 - startHour) * 60 // 8 AM to 10 PM = 14 hours = 840 minutes
+  const endHour = 22 // 10 PM
+  const dayMinutes = (endHour - startHour) * 60 // 8 AM to 10 PM = 14 hours = 840 minutes
   
   // Calculate position as percentage (0-100%)
+  // Formula: (current_time - start_time) / (end_time - start_time) * 100
+  // Example: If current time is 15:30 (3:30 PM) and range is 8:00-22:00:
+  //   currentMinutes = (15*60 + 30) - (8*60) = 930 - 480 = 450 minutes
+  //   dayMinutes = (22-8)*60 = 840 minutes
+  //   position = 450 / 840 * 100 = 53.57%
   const position = (currentMinutes / dayMinutes) * 100
   
-  // Comprehensive debugging
+  // Additional debug: Calculate expected position for verification
+  const expectedHourPosition = ((istanbulHours - startHour) / (endHour - startHour)) * 100
+  const minutesOffset = (istanbulMinutes / 60) * ((100 / (endHour - startHour)))
+  const expectedPosition = expectedHourPosition + minutesOffset
+  
+  // Comprehensive debugging with position verification
   console.log('[Time Indicator Debug]', {
     'UTC Time': `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`,
     'Browser Local Time': `${localHours.toString().padStart(2, '0')}:${localMinutes.toString().padStart(2, '0')}:${localSeconds.toString().padStart(2, '0')}`,
     'Istanbul Time (EXPLICIT)': `${istanbulHours.toString().padStart(2, '0')}:${istanbulMinutes.toString().padStart(2, '0')}:${istanbulSeconds.toString().padStart(2, '0')}`,
     'Browser Timezone Offset': `${timezoneOffsetHours >= 0 ? '+' : ''}${timezoneOffsetHours} hours`,
     'Using Istanbul Time': 'YES (explicit)',
+    'Time Range': `${startHour}:00 - ${endHour}:00 (${endHour - startHour} hours)`,
     'Total Minutes from Midnight (Istanbul)': totalMinutesFromMidnight.toFixed(2),
-    'Start Hour': startHour,
+    'Start Minutes (from midnight)': startMinutes,
     'Current Minutes from Start': currentMinutes.toFixed(2),
-    'Day Minutes (8 AM - 10 PM)': dayMinutes,
+    'Day Minutes (total range)': dayMinutes,
+    'Calculation': `(${currentMinutes.toFixed(2)} / ${dayMinutes}) * 100`,
     'Position Percentage': `${position.toFixed(2)}%`,
+    'Expected Position (verification)': `${expectedPosition.toFixed(2)}%`,
+    'Position Difference': `${Math.abs(position - expectedPosition).toFixed(2)}%`,
   })
+  
+  // Verify calculation manually
+  if (Math.abs(position - expectedPosition) > 1) {
+    console.warn('[Time Indicator] Position calculation mismatch!', {
+      calculated: position.toFixed(2) + '%',
+      expected: expectedPosition.toFixed(2) + '%',
+      difference: Math.abs(position - expectedPosition).toFixed(2) + '%'
+    })
+  }
   
   // Only show indicator if within the visible time range
   if (currentMinutes < 0 || currentMinutes > dayMinutes) {

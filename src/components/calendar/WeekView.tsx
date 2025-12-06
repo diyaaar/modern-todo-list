@@ -126,7 +126,10 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
       </div>
 
       {/* Time slots and events */}
-      <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
+      <div 
+        className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0"
+        id="week-view-timeline-container"
+      >
         {/* Current time indicator - only show if viewing today */}
         {isCurrentWeek && isViewingToday && currentTimePosition !== null && (
           <div
@@ -135,7 +138,8 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
               top: `${currentTimePosition}%`,
             }}
             data-debug-position={currentTimePosition}
-            title={`Current time indicator at ${currentTimePosition.toFixed(2)}%`}
+            data-debug-time={new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            title={`Current time indicator at ${currentTimePosition.toFixed(2)}% (Istanbul: ${new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hour12: false })})`}
           >
             <div className="flex items-center">
               <div className="w-12 flex-shrink-0 flex items-center justify-end pr-2">
