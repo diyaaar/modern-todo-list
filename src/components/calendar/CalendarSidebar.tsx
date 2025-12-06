@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, X, ChevronRight, ChevronLeft, Menu } from 'lucide-react'
+import { Calendar, X, ChevronLeft, Menu } from 'lucide-react'
 import { useCalendar } from '../../contexts/CalendarContext'
 
 interface CalendarSidebarProps {
