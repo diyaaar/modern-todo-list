@@ -40,6 +40,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { useUndoSnackbar } from '../contexts/UndoSnackbarContext'
 import { getImageUrl } from '../lib/storage'
 import { TaskLink, TaskImage } from '../types/attachment'
+import { getColorIdFromHex, getColorHexFromId } from '../utils/colorUtils'
 
 interface TaskProps {
   task: TaskWithSubtasks
@@ -279,26 +280,6 @@ export function Task({ task, depth = 0 }: TaskProps) {
     }
   }
 
-  // Color to ID mapping
-  const getColorId = (colorHex: string | null | undefined): number | null => {
-    if (!colorHex) return null
-    
-    const colorToId: Record<string, number> = {
-      '#a4bdfc': 1,  // Light Blue
-      '#7ae7bf': 2,  // Mint Green
-      '#dbadff': 3,  // Light Purple
-      '#ff887c': 4,  // Coral/Salmon
-      '#fbd75b': 5,  // Light Yellow
-      '#ffb878': 6,  // Peach/Orange
-      '#46d6db': 7,  // Cyan
-      '#e1e1e1': 8,  // Light Gray
-      '#5484ed': 9,  // Medium Blue
-      '#51b749': 10, // Green
-      '#dc2127': 11  // Red
-    }
-    
-    return colorToId[colorHex.toLowerCase()] || null
-  }
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
@@ -315,44 +296,56 @@ export function Task({ task, depth = 0 }: TaskProps) {
         dateString = new Date().toISOString()
       }
 
-      // Get workspace color
-      // First try to find workspace by task's workspace_id
-      let workspace = task.workspace_id 
-        ? workspaces.find(w => w.id === task.workspace_id)
-        : null
+      // Get color from task's color_id (preferred) or workspace color (fallback)
+      let taskColor: string | null = null
+      let colorId: number | null = null
       
-      // Fallback: if workspace not found, use current workspace
-      if (!workspace && currentWorkspaceId) {
-        workspace = workspaces.find(w => w.id === currentWorkspaceId) || null
+      // First, try to get color from task's color_id
+      if (task.color_id) {
+        colorId = task.color_id
+        taskColor = getColorHexFromId(task.color_id)
+        console.log('[Add to Calendar] Using task color_id:', colorId, 'color:', taskColor)
+      } else {
+        // Fallback: get color from workspace
+        let workspace = task.workspace_id 
+          ? workspaces.find(w => w.id === task.workspace_id)
+          : null
+        
+        // Fallback: if workspace not found, use current workspace
+        if (!workspace && currentWorkspaceId) {
+          workspace = workspaces.find(w => w.id === currentWorkspaceId) || null
+        }
+        
+        const workspaceColor = workspace?.color || null
+        colorId = getColorIdFromHex(workspaceColor)
+        taskColor = workspaceColor
+        
+        console.log('[Add to Calendar] Using workspace color - workspace:', workspace, 'color:', workspaceColor, 'colorId:', colorId)
       }
-      
-      const workspaceColor = workspace?.color || null
-      const colorId = getColorId(workspaceColor)
-
-      // Debug logging
-      console.log('[Add to Calendar] Task workspace_id:', task.workspace_id)
-      console.log('[Add to Calendar] Found workspace:', workspace)
-      console.log('[Add to Calendar] Workspace color:', workspaceColor)
-      console.log('[Add to Calendar] Color ID:', colorId)
 
       // Prepare payload
       const payload: {
         summary: string
         description: string
         time: string
-        colorId?: number
+        color?: string
+        colorId?: number | string
       } = {
         summary: task.title,
         time: dateString,
         description: task.description || '',
       }
 
-      // Add colorId if available
+      // Add color and colorId if available
+      if (taskColor) {
+        payload.color = taskColor
+      }
+      
       if (colorId !== null && colorId !== undefined) {
-        payload.colorId = colorId
-        console.log('[Add to Calendar] Added colorId to payload:', colorId)
+        payload.colorId = colorId.toString() // Send as string as per requirement
+        console.log('[Add to Calendar] Added color and colorId to payload:', { color: taskColor, colorId })
       } else {
-        console.warn('[Add to Calendar] No colorId available - workspace:', workspace, 'color:', workspaceColor)
+        console.warn('[Add to Calendar] No colorId available')
       }
 
       console.log('[Add to Calendar] Final payload:', JSON.stringify(payload, null, 2))

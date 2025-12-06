@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Log incoming request for debugging
     console.log('[Calendar Webhook] Received request body:', JSON.stringify(req.body, null, 2))
     
-    const { summary, time, description, colorId } = req.body
+    const { summary, time, description, color, colorId } = req.body
 
     if (!summary) {
       return res.status(400).json({ error: 'summary is required' })
@@ -49,16 +49,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       summary: string
       description: string
       time: string
-      colorId?: number
+      color?: string
+      colorId?: string
     } = {
       summary,
       time,
       description: description || '',
     }
 
-    // Add colorId if provided (as number, not string)
+    // Add color if provided
+    if (color) {
+      payload.color = color
+      console.log('[Calendar Webhook] Added color to payload:', color)
+    }
+
+    // Add colorId if provided (as string, as per requirement)
     if (colorId !== undefined && colorId !== null) {
-      payload.colorId = typeof colorId === 'string' ? parseInt(colorId, 10) : colorId
+      payload.colorId = typeof colorId === 'number' ? colorId.toString() : colorId.toString()
       console.log('[Calendar Webhook] Added colorId to payload:', payload.colorId)
     } else {
       console.warn('[Calendar Webhook] No colorId provided in request')

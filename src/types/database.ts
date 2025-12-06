@@ -83,6 +83,7 @@ export interface Database {
           position: number | null
           background_image_url: string | null
           background_image_display_mode: 'thumbnail' | 'icon' | null
+          color_id: number | null
           created_at: string
           updated_at: string
         }
@@ -101,6 +102,7 @@ export interface Database {
           position?: number | null
           background_image_url?: string | null
           background_image_display_mode?: 'thumbnail' | 'icon' | null
+          color_id?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -119,6 +121,7 @@ export interface Database {
           position?: number | null
           background_image_url?: string | null
           background_image_display_mode?: 'thumbnail' | 'icon' | null
+          color_id?: number | null
           created_at?: string
           updated_at?: string
         }

@@ -5,6 +5,7 @@ import { useWorkspaces } from './WorkspacesContext'
 import { useToast } from './ToastContext'
 import { Task, TaskWithSubtasks, TaskInsert, TaskUpdate, TaskFilter, TaskSort } from '../types/task'
 import { buildTaskTree, flattenTaskTree } from '../utils/taskUtils'
+import { getColorIdFromHex } from '../utils/colorUtils'
 
 const getSupabase = () => getSupabaseClient()
 
@@ -46,7 +47,7 @@ const TasksContext = createContext<TasksContextType | undefined>(undefined)
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const { currentWorkspaceId } = useWorkspaces()
+  const { currentWorkspaceId, workspaces } = useWorkspaces()
   const { showToast } = useToast()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
@@ -346,6 +347,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           throw new Error('Cannot create task: No workspace selected')
         }
 
+        // Get workspace color and calculate color_id
+        const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId)
+        const workspaceColor = currentWorkspace?.color || null
+        const colorId = getColorIdFromHex(workspaceColor)
+
         // Prepare task data
         const taskToInsert: TaskInsert = {
           title: taskData.title.trim(),
@@ -358,6 +364,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           archived: false,
           user_id: user.id,
           position: maxPosition,
+          color_id: colorId, // Assign color_id based on workspace color
           updated_at: new Date().toISOString(),
         }
 
@@ -379,6 +386,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           position: taskToInsert.position ?? null,
           background_image_url: taskToInsert.background_image_url ?? null,
           background_image_display_mode: taskToInsert.background_image_display_mode ?? null,
+          color_id: taskToInsert.color_id ?? null,
           created_at: new Date().toISOString(),
           updated_at: taskToInsert.updated_at ?? new Date().toISOString(),
         }
@@ -442,7 +450,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         return null
       }
     },
-    [user, currentWorkspaceId, showToast]
+    [user, currentWorkspaceId, workspaces, showToast]
   )
 
   // Update task with optimistic update
@@ -460,6 +468,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       
       // CRITICAL: Check if workspace_id is being changed
       const isWorkspaceChange = updates.workspace_id !== undefined && updates.workspace_id !== currentTask.workspace_id
+
+      // If workspace is changing, calculate new color_id from new workspace color
+      if (isWorkspaceChange && updates.workspace_id) {
+        const newWorkspace = workspaces.find(w => w.id === updates.workspace_id)
+        const newWorkspaceColor = newWorkspace?.color || null
+        const newColorId = getColorIdFromHex(newWorkspaceColor)
+        // Add color_id to updates
+        updates.color_id = newColorId
+      }
 
       // Get all subtask IDs BEFORE removing them from state (needed for database update)
       const getAllSubtasks = (parentId: string, allTasks: typeof tasks): string[] => {
@@ -511,11 +528,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (isWorkspaceChange && updates.workspace_id && allSubtasksIds.length > 0) {
             console.log(`[Workspace Move] Moving ${allSubtasksIds.length} subtasks with parent task ${id} to workspace ${updates.workspace_id}`)
             
-            // Update all subtasks in database
+            // Get new workspace color for subtasks
+            const newWorkspace = workspaces.find(w => w.id === updates.workspace_id)
+            const newWorkspaceColor = newWorkspace?.color || null
+            const newColorId = getColorIdFromHex(newWorkspaceColor)
+            
+            // Update all subtasks in database (including color_id)
             const { error: subtasksUpdateError } = await supabase
               .from('tasks')
               .update({
                 workspace_id: updates.workspace_id,
+                color_id: newColorId, // Update color_id for subtasks too
                 updated_at: new Date().toISOString(),
               })
               .in('id', allSubtasksIds)
@@ -525,7 +548,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
               // Don't throw here - we'll still try to update the parent task
               // The error will be caught and handled below
             } else {
-              console.log(`[Workspace Move] Successfully moved ${allSubtasksIds.length} subtasks`)
+              console.log(`[Workspace Move] Successfully moved ${allSubtasksIds.length} subtasks with color_id: ${newColorId}`)
             }
         }
         
@@ -634,7 +657,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         throw err
       }
     },
-    [tasks, showToast]
+    [tasks, workspaces, showToast]
   )
 
   // Delete task with optimistic update
