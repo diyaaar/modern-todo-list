@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Plus, Camera, Calendar, List } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useWorkspaces } from '../contexts/WorkspacesContext'
