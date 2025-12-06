@@ -574,7 +574,7 @@ export function CalendarPage() {
           event={selectedEvent}
         />
       )}
-      </div>
+      </motion.div>
     </div>
   )
 }
