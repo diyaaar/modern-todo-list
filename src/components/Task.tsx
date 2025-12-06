@@ -51,7 +51,6 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const { getTaskTags, removeTagFromTask } = useTags()
   const { getTaskLinks, addTaskLink, updateTaskLink, deleteTaskLink, getTaskImages, addTaskImage, deleteTaskImage } = useAttachments()
   const { showToast } = useToast()
-  const { showSnackbar } = useUndoSnackbar()
   const { user } = useAuth()
   const { workspaces, currentWorkspaceId } = useWorkspaces()
   // Persist expand/collapse state in localStorage

@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 type ViewMode = 'tasks' | 'calendar'
 
 export function HomePage() {
-  const { loading, error, filteredAndSortedTasks, filter } = useTasks()
+  const { loading, error, filteredAndSortedTasks } = useTasks()
   const { workspaces, currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaces()
   const { currentAction, isOpen, closeSnackbar } = useUndoSnackbar()
   const [showNewTaskForm, setShowNewTaskForm] = useState(false)
