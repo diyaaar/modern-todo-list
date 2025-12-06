@@ -26,22 +26,42 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
     events: CalendarEvent[]
     timeSlot: string
   } | null>(null)
-  const [currentTimePosition, setCurrentTimePosition] = useState<number | null>(getCurrentTimePosition(8))
+  // Get today's date in local timezone for comparison
+  const today = new Date()
+  const isViewingToday = weekDays.some(day => {
+    return day.getDate() === today.getDate() &&
+           day.getMonth() === today.getMonth() &&
+           day.getFullYear() === today.getFullYear()
+  })
+  
+  const [currentTimePosition, setCurrentTimePosition] = useState<number | null>(() => {
+    // Only show indicator if viewing current week and today
+    if (isCurrentWeek && isViewingToday) {
+      return getCurrentTimePosition(8)
+    }
+    return null
+  })
 
-  // Update current time position every minute
+  // Update current time position every minute (only if viewing current week and today)
   useEffect(() => {
+    if (!isCurrentWeek || !isViewingToday) {
+      setCurrentTimePosition(null)
+      return
+    }
+    
     const updateTime = () => {
-      setCurrentTimePosition(getCurrentTimePosition(8))
+      const position = getCurrentTimePosition(8)
+      setCurrentTimePosition(position)
     }
     
     // Update immediately
     updateTime()
     
-    // Update every minute
+    // Update every minute for smooth movement
     const interval = setInterval(updateTime, 60000)
     
     return () => clearInterval(interval)
-  }, [])
+  }, [isCurrentWeek, isViewingToday])
 
   if (loading) {
     return (
@@ -98,15 +118,15 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
 
       {/* Time slots and events */}
       <div className="relative overflow-y-auto max-h-[70vh]">
-        {/* Current time indicator */}
-        {isCurrentWeek && currentTimePosition !== null && (
+        {/* Current time indicator - only show if viewing today */}
+        {isCurrentWeek && isViewingToday && currentTimePosition !== null && (
           <div
             className="absolute left-0 right-0 z-10 pointer-events-none"
             style={{ top: `${currentTimePosition}%` }}
           >
             <div className="flex items-center">
               <div className="w-12 flex-shrink-0 flex items-center justify-end pr-2">
-                <div className="w-2 h-2 rounded-full bg-danger"></div>
+                <div className="w-2 h-2 rounded-full bg-danger shadow-sm"></div>
               </div>
               <div className="flex-1 h-0.5 bg-danger"></div>
             </div>
