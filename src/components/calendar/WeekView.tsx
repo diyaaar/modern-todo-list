@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
+import { format, startOfWeek, addDays, isSameDay, isToday, startOfDay } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
 import { generateTimeSlots, getEventsForWeek } from '../../utils/calendarUtils'
@@ -17,8 +17,7 @@ interface WeekViewProps {
 }
 
 export function WeekView({ currentDate, events, loading, onEventClick, onDayClick, weekOptions }: WeekViewProps) {
-  const weekStart = startOfWeek(currentDate, weekOptions)
-  // Show 3 days on mobile, 7 days on desktop
+  // Show 3 days on mobile (today + next 2 days), 7 days on desktop (week view)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   
   useEffect(() => {
@@ -29,8 +28,14 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
     return () => window.removeEventListener('resize', handleResize)
   }, [])
   
+  // On mobile: show today + next 2 days
+  // On desktop: show full week starting Monday
+  const weekStart = startOfWeek(currentDate, weekOptions)
+  const today = startOfDay(new Date())
   const dayCount = isMobile ? 3 : 7
-  const weekDays = Array.from({ length: dayCount }, (_, i) => addDays(weekStart, i))
+  const weekDays = isMobile 
+    ? Array.from({ length: 3 }, (_, i) => addDays(today, i)) // Today + next 2 days
+    : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) // Full week
   const timeSlots = generateTimeSlots(8, 22)
   const weekEvents = getEventsForWeek(events, weekStart)
   const [overlapModal, setOverlapModal] = useState<{

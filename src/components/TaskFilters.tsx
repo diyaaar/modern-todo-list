@@ -18,23 +18,24 @@ export function TaskFilters() {
 
   return (
     <div className="bg-background-secondary border border-background-tertiary rounded-lg p-3 sm:p-4 mb-6">
-      <div className="flex flex-row gap-3 md:gap-4 flex-wrap">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tasks..."
-            className="w-full pl-10 pr-4 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base sm:text-sm"
-            aria-label="Search tasks"
-          />
-        </div>
+      {/* Search - Full width on mobile, part of row on desktop */}
+      <div className="mb-3 md:mb-0 md:flex-1 md:relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search tasks..."
+          className="w-full pl-10 pr-4 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base sm:text-sm"
+          aria-label="Search tasks"
+        />
+      </div>
 
+      {/* Filter and Sort - Side-by-side on mobile, part of row on desktop */}
+      <div className="flex flex-row gap-3 md:gap-4 md:flex-row">
         {/* Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-text-tertiary" />
+        <div className="flex-1 md:flex-initial flex items-center gap-2">
+          <Filter className="w-4 h-4 text-text-tertiary flex-shrink-0" />
           <select
             value={filter}
             onChange={(e) => {
@@ -42,7 +43,7 @@ export function TaskFilters() {
               console.log('[TaskFilters] Filter changed to:', newFilter)
               setFilter(newFilter)
             }}
-            className="px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
+            className="flex-1 md:flex-initial px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Filter tasks by status"
           >
             <option value="all">All Tasks</option>
@@ -51,14 +52,13 @@ export function TaskFilters() {
           </select>
         </div>
 
-
         {/* Sort */}
-        <div className="flex items-center gap-2">
-          <SortAsc className="w-4 h-4 text-text-tertiary" />
+        <div className="flex-1 md:flex-initial flex items-center gap-2">
+          <SortAsc className="w-4 h-4 text-text-tertiary flex-shrink-0" />
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as TaskSort)}
-            className="px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
+            className="flex-1 md:flex-initial px-3 py-2.5 sm:py-2 min-h-[44px] bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-manipulation"
             aria-label="Sort tasks"
           >
             <option value="created">Created Date</option>
