@@ -70,11 +70,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const expiryDate = Date.now() + (tokens.expires_in * 1000)
 
     // Initialize Supabase client
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+    // In Vercel, use SUPABASE_URL (not VITE_SUPABASE_URL which is client-side only)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables')
+      console.error('Missing Supabase environment variables:', {
+        hasUrl: !!supabaseUrl,
+        hasServiceKey: !!supabaseServiceKey,
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
+      })
       return res.redirect(`${FRONTEND_URL}?calendar_error=configuration_error`)
     }
 

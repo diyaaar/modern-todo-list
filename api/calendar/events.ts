@@ -44,10 +44,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Initialize Supabase client
-      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+      // In Vercel, use SUPABASE_URL (not VITE_SUPABASE_URL which is client-side only)
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
       if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Missing Supabase environment variables in events GET endpoint')
         return res.status(500).json({ error: 'Supabase configuration missing' })
       }
 
@@ -157,10 +159,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Initialize Supabase client
-      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+      // In Vercel, use SUPABASE_URL (not VITE_SUPABASE_URL which is client-side only)
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
       if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Missing Supabase environment variables in events POST endpoint')
         return res.status(500).json({ error: 'Supabase configuration missing' })
       }
 

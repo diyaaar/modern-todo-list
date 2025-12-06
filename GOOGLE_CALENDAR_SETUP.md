@@ -54,11 +54,22 @@ This guide will help you set up Google Calendar API integration for the Todo Lis
 Add these environment variables to your Vercel project (or `.env.local` for local development):
 
 ```bash
+# Google OAuth
 GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REDIRECT_URI=https://yourdomain.com/api/calendar/auth/callback
 FRONTEND_URL=https://yourdomain.com
+
+# Supabase (for serverless functions - REQUIRED)
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
+
+**⚠️ IMPORTANT:** 
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are **REQUIRED** for the calendar API routes
+- These are different from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (which are for client-side)
+- The service role key should start with `eyJ...` (JWT format) or be your service role secret key
+- Never expose the service role key in client-side code
 
 For local development:
 ```bash
@@ -66,6 +77,8 @@ GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/calendar/auth/callback
 FRONTEND_URL=http://localhost:5173
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ## Step 5: Database Setup (Optional - for token storage)
