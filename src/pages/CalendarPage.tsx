@@ -15,18 +15,24 @@ import {
   isWeekend,
   startOfDay,
   isToday as isTodayDate,
+  addDays,
 } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCalendar, CalendarEvent } from '../contexts/CalendarContext'
 import { useToast } from '../contexts/ToastContext'
 import { EventBlock } from '../components/calendar/EventBlock'
 import { Tooltip } from '../components/calendar/Tooltip'
+import { DayModal } from '../components/calendar/DayModal'
 import { calendarTheme } from '../config/calendarTheme'
+import { WeekView } from '../components/calendar/WeekView'
+import { DayView } from '../components/calendar/DayView'
+import { getEventsForWeek, getEventsForDay } from '../utils/calendarUtils'
 
 export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month')
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
@@ -91,6 +97,7 @@ export function CalendarPage() {
           break
         case 'Escape':
           setShowShortcuts(false)
+          setSelectedDate(null)
           break
       }
     }
@@ -126,18 +133,33 @@ export function CalendarPage() {
     touchStartY.current = null
   }
 
+  // Week starts on Monday (weekStartsOn: 1)
+  const weekOptions = { weekStartsOn: 1 as const }
+  
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = endOfWeek(monthEnd)
+  const calendarStart = startOfWeek(monthStart, weekOptions)
+  const calendarEnd = endOfWeek(monthEnd, weekOptions)
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   const handlePreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
+    if (viewMode === 'month') {
+      setCurrentDate(subMonths(currentDate, 1))
+    } else if (viewMode === 'week') {
+      setCurrentDate(addDays(currentDate, -7))
+    } else if (viewMode === 'day') {
+      setCurrentDate(addDays(currentDate, -1))
+    }
   }
 
   const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
+    if (viewMode === 'month') {
+      setCurrentDate(addMonths(currentDate, 1))
+    } else if (viewMode === 'week') {
+      setCurrentDate(addDays(currentDate, 7))
+    } else if (viewMode === 'day') {
+      setCurrentDate(addDays(currentDate, 1))
+    }
   }
 
   const handleToday = () => {
@@ -161,8 +183,7 @@ export function CalendarPage() {
   }
 
   const handleDayClick = (date: Date) => {
-    // TODO: Open day modal with events
-    console.log('Day clicked:', date)
+    setSelectedDate(date)
   }
 
   if (!isAuthenticated) {
@@ -213,10 +234,14 @@ export function CalendarPage() {
       >
         <div>
           <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
-            {format(currentDate, 'MMMM yyyy')}
+            {viewMode === 'month' && format(currentDate, 'MMMM yyyy')}
+            {viewMode === 'week' && `Week of ${format(startOfWeek(currentDate, weekOptions), 'MMM d')}`}
+            {viewMode === 'day' && format(currentDate, 'EEEE, MMMM d, yyyy')}
           </h2>
           <p className="text-sm text-text-tertiary">
-            {events.length} event{events.length !== 1 ? 's' : ''} this month
+            {viewMode === 'month' && `${events.length} event${events.length !== 1 ? 's' : ''} this month`}
+            {viewMode === 'week' && `${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length} event${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length !== 1 ? 's' : ''} this week`}
+            {viewMode === 'day' && `${getEventsForDay(events, currentDate).length} event${getEventsForDay(events, currentDate).length !== 1 ? 's' : ''} today`}
           </p>
         </div>
 
@@ -391,13 +416,13 @@ export function CalendarPage() {
             transition={{ duration: 0.3 }}
             className="bg-background-secondary border border-background-tertiary rounded-lg p-4 sm:p-6"
           >
-            {/* Day Headers */}
+            {/* Day Headers - Monday to Sunday */}
             <div className="grid grid-cols-7 gap-2 mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
                 <div
                   key={day}
                   className={`text-center text-sm font-semibold py-2 ${
-                    index === 0 || index === 6 ? 'text-text-tertiary' : 'text-text-secondary'
+                    index === 5 || index === 6 ? 'text-text-tertiary' : 'text-text-secondary'
                   }`}
                 >
                   {day}
@@ -512,31 +537,43 @@ export function CalendarPage() {
         )}
 
         {viewMode === 'week' && (
-          <motion.div
-            key="week"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary"
-          >
-            Week view coming soon
-          </motion.div>
+          <WeekView
+            currentDate={currentDate}
+            events={events}
+            loading={loading}
+            onEventClick={handleEventClick}
+            onDayClick={handleDayClick}
+            weekOptions={weekOptions}
+          />
         )}
 
         {viewMode === 'day' && (
-          <motion.div
-            key="day"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary"
-          >
-            Day view coming soon
-          </motion.div>
+          <DayView
+            currentDate={currentDate}
+            events={events}
+            loading={loading}
+            onEventClick={handleEventClick}
+            onCreateEvent={(date) => {
+              // TODO: Open create event form
+              console.log('Create event for:', date)
+            }}
+          />
         )}
       </AnimatePresence>
+
+      {/* Day Modal */}
+      {selectedDate && (
+        <DayModal
+          isOpen={!!selectedDate}
+          onClose={() => setSelectedDate(null)}
+          date={selectedDate}
+          events={events}
+          onCreateEvent={(date) => {
+            // TODO: Open create event form
+            console.log('Create event for:', date)
+          }}
+        />
+      )}
     </div>
   )
 }
