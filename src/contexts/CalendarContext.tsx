@@ -211,13 +211,10 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         throw new Error('Not authenticated')
       }
 
-      // Build query with selected calendar IDs
-      const calendarIdsParam = selectedCalendarIds.length > 0 
-        ? `&calendarIds=${selectedCalendarIds.join(',')}`
-        : ''
-
+      // Fetch ALL events (don't filter by selectedCalendarIds here - we'll filter in memory)
+      // This allows smooth toggling without refetching
       const response = await fetch(
-        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}${calendarIdsParam}`,
+        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -238,7 +235,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, user, selectedCalendarIds, showToast])
+  }, [isAuthenticated, user, showToast])
 
   const createEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> => {
     if (!isAuthenticated) return null

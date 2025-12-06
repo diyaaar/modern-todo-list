@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { motion } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
 import { calendarTheme } from '../../config/calendarTheme'
 import { Clock } from 'lucide-react'
@@ -18,7 +19,11 @@ export function EventBlock({ event, variant = 'month', onClick }: EventBlockProp
 
   if (variant === 'month') {
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2 }}
         onClick={onClick}
         className={`
           text-xs px-1.5 py-0.5 rounded-md truncate cursor-pointer
@@ -52,13 +57,17 @@ export function EventBlock({ event, variant = 'month', onClick }: EventBlockProp
           </span>
           <span className="truncate flex-1">{event.summary}</span>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // Week/Day view - more detailed
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
       onClick={onClick}
       className={`
         p-2 rounded-md cursor-pointer border-l-4
@@ -106,7 +115,7 @@ export function EventBlock({ event, variant = 'month', onClick }: EventBlockProp
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 

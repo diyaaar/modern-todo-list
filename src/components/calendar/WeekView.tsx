@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
-import { generateTimeSlots, getEventsForWeek, calculateEventPosition, getCurrentTimePosition } from '../../utils/calendarUtils'
+import { generateTimeSlots, getEventsForWeek, getCurrentTimePosition } from '../../utils/calendarUtils'
+import { calculateEventPositions } from '../../utils/eventOverlap'
+import { OverlapEventsModal } from './OverlapEventsModal'
 import { Loader2 } from 'lucide-react'
 
 interface WeekViewProps {
@@ -20,6 +23,10 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
   const weekEvents = getEventsForWeek(events, weekStart)
   const currentTimePosition = getCurrentTimePosition(8)
   const isCurrentWeek = weekDays.some(day => isToday(day))
+  const [overlapModal, setOverlapModal] = useState<{
+    events: CalendarEvent[]
+    timeSlot: string
+  } | null>(null)
 
   if (loading) {
     return (
@@ -144,43 +151,124 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
 
                 {/* Events */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {dayEvents.map((event) => {
-                    const pos = calculateEventPosition(event, 8)
-                    const eventColor = event.color || '#3b82f6'
+                  {(() => {
+                    const positioned = calculateEventPositions(dayEvents, 8)
+                    const overlapGroups = new Map<string, CalendarEvent[]>()
                     
-                    return (
-                      <div
-                        key={event.id}
-                        className="absolute left-0 right-0 pointer-events-auto cursor-pointer"
-                        style={{
-                          top: `${pos.top}%`,
-                          height: `${pos.height}%`,
-                          padding: '0 2px',
-                        }}
-                        onClick={() => onEventClick(event)}
-                      >
-                        <div
-                          className="h-full rounded px-2 py-0.5 text-xs overflow-hidden hover:shadow-md transition-shadow"
-                          style={{
-                            backgroundColor: `${eventColor}20`,
-                            borderLeft: `3px solid ${eventColor}`,
-                            color: eventColor,
-                          }}
-                        >
-                          <div className="font-medium truncate">{event.summary}</div>
-                          <div className="text-[10px] opacity-80">
-                            {format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}
-                          </div>
-                        </div>
-                      </div>
+                    // Group overlapping events
+                    dayEvents.forEach(event => {
+                      const start = new Date(event.start).getTime()
+                      const key = `${Math.floor(start / (30 * 60 * 1000))}` // 30-min buckets
+                      
+                      if (!overlapGroups.has(key)) {
+                        overlapGroups.set(key, [])
+                      }
+                      overlapGroups.get(key)!.push(event)
+                    })
+
+                    // Find events that are hidden (part of 3+ overlap group)
+                    const hiddenEvents: CalendarEvent[] = []
+                    overlapGroups.forEach((groupEvents) => {
+                      if (groupEvents.length > 2) {
+                        // Events beyond index 1 are hidden
+                        hiddenEvents.push(...groupEvents.slice(2))
+                      }
+                    })
+
+                    const visiblePositioned = positioned.filter(p => 
+                      !hiddenEvents.some(h => h.id === p.event.id)
                     )
-                  })}
+
+                    return (
+                      <>
+                        <AnimatePresence>
+                          {visiblePositioned.map((pos) => {
+                            const eventColor = pos.event.color || '#3b82f6'
+                            
+                            return (
+                              <motion.div
+                                key={pos.event.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                className="absolute pointer-events-auto cursor-pointer"
+                                style={{
+                                  top: `${pos.top}%`,
+                                  height: `${pos.height}%`,
+                                  left: `${pos.left}%`,
+                                  width: `${pos.width}%`,
+                                  zIndex: pos.zIndex,
+                                }}
+                                onClick={() => onEventClick(pos.event)}
+                              >
+                                <div
+                                  className="h-full rounded px-2 py-0.5 text-xs overflow-hidden hover:shadow-md transition-all duration-200"
+                                  style={{
+                                    backgroundColor: `${eventColor}20`,
+                                    borderLeft: `3px solid ${eventColor}`,
+                                    color: eventColor,
+                                  }}
+                                >
+                                  <div className="font-medium truncate">{pos.event.summary}</div>
+                                  <div className="text-[10px] opacity-80">
+                                    {format(new Date(pos.event.start), 'HH:mm')} - {format(new Date(pos.event.end), 'HH:mm')}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )
+                          })}
+                        </AnimatePresence>
+
+                        {/* "+X more" button for hidden events */}
+                        {hiddenEvents.length > 0 && (() => {
+                          const firstHidden = hiddenEvents[0]
+                          const startTime = new Date(firstHidden.start)
+                          const dayStart = new Date(day)
+                          dayStart.setHours(8, 0, 0, 0)
+                          const top = ((startTime.getTime() - dayStart.getTime()) / (16 * 60 * 60 * 1000)) * 100
+                          const timeSlot = format(startTime, 'HH:mm')
+
+                          return (
+                            <motion.button
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              className="absolute left-1/2 -translate-x-1/2 pointer-events-auto cursor-pointer z-20 px-2 py-1 rounded text-xs font-medium bg-background-tertiary hover:bg-background-tertiary/80 text-text-primary border border-background-tertiary shadow-sm transition-all duration-200"
+                              style={{
+                                top: `${top}%`,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOverlapModal({
+                                  events: hiddenEvents,
+                                  timeSlot: `${timeSlot} - ${format(new Date(hiddenEvents[hiddenEvents.length - 1].end), 'HH:mm')}`,
+                                })
+                              }}
+                            >
+                              +{hiddenEvents.length} more
+                            </motion.button>
+                          )
+                        })()}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+
+      {/* Overlap Events Modal */}
+      {overlapModal && (
+        <OverlapEventsModal
+          isOpen={!!overlapModal}
+          onClose={() => setOverlapModal(null)}
+          events={overlapModal.events}
+          timeSlot={overlapModal.timeSlot}
+        />
+      )}
     </motion.div>
   )
 }

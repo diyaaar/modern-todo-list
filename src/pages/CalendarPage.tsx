@@ -494,7 +494,11 @@ export function CalendarPage() {
                         </AnimatePresence>
                         {dayEvents.length > 3 && (
                           <Tooltip content={`${dayEvents.length - 3} more events`}>
-                            <button
+                            <motion.button
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              transition={{ duration: 0.2 }}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDayClick(day)
@@ -502,7 +506,7 @@ export function CalendarPage() {
                               className="text-xs text-text-tertiary hover:text-primary px-1.5 py-0.5 rounded hover:bg-background-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                               +{dayEvents.length - 3} more
-                            </button>
+                            </motion.button>
                           </Tooltip>
                         )}
                       </div>
