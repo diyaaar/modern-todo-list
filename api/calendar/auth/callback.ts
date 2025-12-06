@@ -22,9 +22,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Verify state token (CSRF protection)
+  // State format from Google: "random_string:user_id"
+  // Stored state in cookie: "random_string" (without user_id)
+  const stateParts = (state as string).split(':')
+  const stateRandomPart = stateParts[0] // Extract just the random part
+  const userId = stateParts.length > 1 ? stateParts[1] : null
   const storedState = req.cookies?.oauth_state
-  if (state !== storedState) {
+  
+  if (!storedState || stateRandomPart !== storedState) {
+    console.error('State verification failed:', {
+      received: stateRandomPart,
+      stored: storedState,
+      fullState: state,
+    })
     return res.redirect(`${FRONTEND_URL}?calendar_error=invalid_state`)
+  }
+
+  if (!userId) {
+    return res.redirect(`${FRONTEND_URL}?calendar_error=missing_user_id`)
   }
 
   try {
@@ -50,15 +65,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const tokens = await tokenResponse.json()
-
-    // Get user ID from state (we'll encode it in the state parameter)
-    // State format: "random_string:user_id"
-    const stateParts = (state as string).split(':')
-    const userId = stateParts.length > 1 ? stateParts[1] : null
-
-    if (!userId) {
-      return res.redirect(`${FRONTEND_URL}?calendar_error=missing_user_id`)
-    }
 
     // Calculate expiry date
     const expiryDate = Date.now() + (tokens.expires_in * 1000)
