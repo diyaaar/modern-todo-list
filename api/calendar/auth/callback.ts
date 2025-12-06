@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { supabase } from '../../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -62,6 +62,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Calculate expiry date
     const expiryDate = Date.now() + (tokens.expires_in * 1000)
+
+    // Initialize Supabase client
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables')
+      return res.redirect(`${FRONTEND_URL}?calendar_error=configuration_error`)
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
     // Store tokens in Supabase
     const { error: dbError } = await supabase

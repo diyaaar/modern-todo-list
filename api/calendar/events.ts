@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { google } from 'googleapis'
-import { supabase } from '../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -42,6 +42,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!userId) {
         return res.status(401).json({ error: 'User ID required' })
       }
+
+      // Initialize Supabase client
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        return res.status(500).json({ error: 'Supabase configuration missing' })
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
 
       const { data: tokens, error: tokenError } = await supabase
         .from('google_calendar_tokens')
@@ -140,6 +155,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!userId) {
         return res.status(401).json({ error: 'User ID required' })
       }
+
+      // Initialize Supabase client
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        return res.status(500).json({ error: 'Supabase configuration missing' })
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
 
       // Get user's tokens
       const { data: tokens, error: tokenError } = await supabase
