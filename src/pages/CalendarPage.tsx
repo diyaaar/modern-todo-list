@@ -1,17 +1,37 @@
-import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns'
-import { motion } from 'framer-motion'
-import { useCalendar } from '../contexts/CalendarContext'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { ChevronLeft, ChevronRight, Plus, Loader2, HelpCircle } from 'lucide-react'
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  isPast,
+  isWeekend,
+  startOfDay,
+  isToday as isTodayDate,
+} from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useCalendar, CalendarEvent } from '../contexts/CalendarContext'
 import { useToast } from '../contexts/ToastContext'
+import { EventBlock } from '../components/calendar/EventBlock'
+import { Tooltip } from '../components/calendar/Tooltip'
+import { calendarTheme } from '../config/calendarTheme'
 
 export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month')
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
+  const calendarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -24,9 +44,7 @@ export function CalendarPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('calendar_connected') === 'true') {
       showToast('Google Calendar connected successfully!', 'success', 3000)
-      // Clean URL
       window.history.replaceState({}, '', window.location.pathname)
-      // Refresh auth status
       window.location.reload()
     } else if (params.get('calendar_error')) {
       const error = params.get('calendar_error')
@@ -34,6 +52,52 @@ export function CalendarPage() {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [showToast])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault()
+          handlePreviousMonth()
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          handleNextMonth()
+          break
+        case 't':
+        case 'T':
+          e.preventDefault()
+          handleToday()
+          break
+        case 'm':
+        case 'M':
+          e.preventDefault()
+          setViewMode('month')
+          break
+        case 'w':
+        case 'W':
+          e.preventDefault()
+          setViewMode('week')
+          break
+        case 'd':
+        case 'D':
+          e.preventDefault()
+          setViewMode('day')
+          break
+        case 'Escape':
+          setShowShortcuts(false)
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Mobile swipe gestures
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -50,13 +114,10 @@ export function CalendarPage() {
     const diffY = Math.abs(touchStartY.current - touchEndY)
     const threshold = 50
 
-    // Only handle horizontal swipes (ignore vertical scrolling)
     if (Math.abs(diffX) > threshold && diffY < threshold) {
       if (diffX > 0) {
-        // Swipe left - next month
         handleNextMonth()
       } else {
-        // Swipe right - previous month
         handlePreviousMonth()
       }
     }
@@ -83,6 +144,10 @@ export function CalendarPage() {
     setCurrentDate(new Date())
   }
 
+  const isToday = useCallback((date: Date) => {
+    return isTodayDate(date)
+  }, [])
+
   const getEventsForDate = (date: Date) => {
     return events.filter(event => {
       const eventDate = new Date(event.start)
@@ -90,11 +155,26 @@ export function CalendarPage() {
     })
   }
 
+  const handleEventClick = (event: CalendarEvent) => {
+    // TODO: Open event details modal
+    console.log('Event clicked:', event)
+  }
+
+  const handleDayClick = (date: Date) => {
+    // TODO: Open day modal with events
+    console.log('Day clicked:', date)
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <div className="mb-6">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mb-6"
+          >
             <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Plus className="w-10 h-10 text-primary" />
             </div>
@@ -102,28 +182,37 @@ export function CalendarPage() {
             <p className="text-text-tertiary mb-6">
               Connect your Google Calendar to view and manage events alongside your tasks.
             </p>
-          </div>
-          <button
+          </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={connectGoogleCalendar}
-            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
           >
             Connect Google Calendar
-          </button>
+          </motion.button>
         </div>
       </div>
     )
   }
 
+  const isTodayButtonDisabled = isToday(currentDate)
+
   return (
-    <div 
+    <div
+      ref={calendarRef}
       className="space-y-6"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Calendar Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">
+          <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
             {format(currentDate, 'MMMM yyyy')}
           </h2>
           <p className="text-sm text-text-tertiary">
@@ -136,31 +225,46 @@ export function CalendarPage() {
           <div className="flex items-center gap-1 bg-background-secondary border border-background-tertiary rounded-lg p-1">
             <button
               onClick={() => setViewMode('month')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                viewMode === 'month'
-                  ? 'bg-primary text-white'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary
+                ${
+                  viewMode === 'month'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                }
+              `}
+              aria-label="Month view"
             >
               Month
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                viewMode === 'week'
-                  ? 'bg-primary text-white'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary
+                ${
+                  viewMode === 'week'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                }
+              `}
+              aria-label="Week view"
             >
               Week
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                viewMode === 'day'
-                  ? 'bg-primary text-white'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary
+                ${
+                  viewMode === 'day'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                }
+              `}
+              aria-label="Day view"
             >
               Day
             </button>
@@ -168,134 +272,271 @@ export function CalendarPage() {
 
           {/* Navigation */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePreviousMonth}
-              className="p-2 hover:bg-background-tertiary rounded-lg transition-colors"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="w-5 h-5 text-text-tertiary" />
-            </button>
+            <Tooltip content="Previous (←)">
+              <button
+                onClick={handlePreviousMonth}
+                className="p-2 hover:bg-background-tertiary rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary"
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="w-5 h-5 text-text-tertiary" />
+              </button>
+            </Tooltip>
             <button
               onClick={handleToday}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-background-tertiary rounded-lg transition-colors"
+              disabled={isTodayButtonDisabled}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary
+                ${
+                  isTodayButtonDisabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg hover:scale-105 active:scale-95'
+                }
+              `}
+              aria-label="Go to today"
             >
               Today
             </button>
-            <button
-              onClick={handleNextMonth}
-              className="p-2 hover:bg-background-tertiary rounded-lg transition-colors"
-              aria-label="Next month"
-            >
-              <ChevronRight className="w-5 h-5 text-text-tertiary" />
-            </button>
+            <Tooltip content="Next (→)">
+              <button
+                onClick={handleNextMonth}
+                className="p-2 hover:bg-background-tertiary rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary"
+                aria-label="Next month"
+              >
+                <ChevronRight className="w-5 h-5 text-text-tertiary" />
+              </button>
+            </Tooltip>
           </div>
+
+          {/* Keyboard Shortcuts Button */}
+          <Tooltip content="Keyboard shortcuts">
+            <button
+              onClick={() => setShowShortcuts(!showShortcuts)}
+              className="p-2 hover:bg-background-tertiary rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary"
+              aria-label="Show keyboard shortcuts"
+            >
+              <HelpCircle className="w-5 h-5 text-text-tertiary" />
+            </button>
+          </Tooltip>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowShortcuts(false)}
+          >
+            <motion.div
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              exit={{ y: 20 }}
+              className="bg-background-secondary border border-background-tertiary rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-bold text-text-primary mb-4">Keyboard Shortcuts</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Navigate</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">← →</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Go to today</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">T</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Month view</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">M</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Week view</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">W</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Day view</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">D</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">Close</span>
+                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">Esc</kbd>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && (
-        <div className="bg-danger/10 border border-danger/20 text-danger px-4 py-3 rounded-lg">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-danger/10 border border-danger/20 text-danger px-4 py-3 rounded-lg"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
 
       {/* Calendar Grid */}
-      {viewMode === 'month' && (
-        <div className="bg-background-secondary border border-background-tertiary rounded-lg p-4 sm:p-6">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div
-                key={day}
-                className="text-center text-sm font-medium text-text-tertiary py-2"
-              >
-                {day}
+      <AnimatePresence mode="wait">
+        {viewMode === 'month' && (
+          <motion.div
+            key="month"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-background-secondary border border-background-tertiary rounded-lg p-4 sm:p-6"
+          >
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                <div
+                  key={day}
+                  className={`text-center text-sm font-semibold py-2 ${
+                    index === 0 || index === 6 ? 'text-text-tertiary' : 'text-text-secondary'
+                  }`}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, index) => {
+                  const dayEvents = getEventsForDate(day)
+                  const isCurrentMonth = isSameMonth(day, currentDate)
+                  const isTodayDay = isToday(day)
+                  const isPastDay = isPast(startOfDay(day)) && !isTodayDay
+                  const isWeekendDay = isWeekend(day)
 
-          {/* Calendar Days */}
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map((day, index) => {
-                const dayEvents = getEventsForDate(day)
-                const isCurrentMonth = isSameMonth(day, currentDate)
-                const isToday = isSameDay(day, new Date())
-
-                return (
-                  <motion.div
-                    key={day.toISOString()}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.01 }}
-                    className={`
-                      min-h-[80px] sm:min-h-[100px] p-2 rounded-lg border transition-all
-                      ${isCurrentMonth
-                        ? 'bg-background-tertiary border-background-tertiary hover:border-primary/50'
-                        : 'bg-background-secondary/50 border-background-tertiary/50 opacity-50'
-                      }
-                      ${isToday ? 'ring-2 ring-primary' : ''}
-                    `}
-                  >
-                    <div
+                  return (
+                    <motion.div
+                      key={day.toISOString()}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.01 }}
+                      onClick={() => handleDayClick(day)}
                       className={`
-                        text-sm font-medium mb-1
-                        ${isToday
-                          ? 'text-primary'
-                          : isCurrentMonth
-                          ? 'text-text-primary'
-                          : 'text-text-tertiary'
+                        min-h-[100px] sm:min-h-[120px] p-2 sm:p-3 rounded-lg border transition-all duration-200 cursor-pointer
+                        ${isCurrentMonth
+                          ? isWeekendDay
+                            ? calendarTheme.colors.weekend.bg
+                            : 'bg-background-tertiary'
+                          : 'bg-background-secondary/50 opacity-50'
                         }
+                        ${isTodayDay
+                          ? `${calendarTheme.colors.today.ring} ${calendarTheme.colors.today.bg} border-primary`
+                          : 'border-background-tertiary hover:border-primary/50'
+                        }
+                        ${isPastDay ? calendarTheme.colors.past.opacity : ''}
+                        hover:bg-background-tertiary/80 hover:shadow-sm
+                        focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                       `}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleDayClick(day)
+                        }
+                      }}
+                      aria-label={`${format(day, 'EEEE, MMMM d')}${dayEvents.length > 0 ? `, ${dayEvents.length} events` : ''}`}
                     >
-                      {format(day, 'd')}
-                    </div>
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 3).map((event) => (
-                        <div
-                          key={event.id}
-                          className="text-xs px-1.5 py-0.5 rounded truncate"
-                          style={{
-                            backgroundColor: event.color ? `${event.color}20` : '#3b82f620',
-                            color: event.color || '#3b82f6',
-                            borderLeft: `2px solid ${event.color || '#3b82f6'}`,
-                          }}
-                          title={event.summary}
-                        >
-                          {format(new Date(event.start), 'HH:mm')} {event.summary}
-                        </div>
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <div className="text-xs text-text-tertiary px-1.5">
-                          +{dayEvents.length - 3} more
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                      <div
+                        className={`
+                          text-sm font-semibold mb-2 flex items-center justify-between
+                          ${isTodayDay
+                            ? calendarTheme.colors.today.text
+                            : isCurrentMonth
+                            ? 'text-text-primary'
+                            : 'text-text-tertiary'
+                          }
+                        `}
+                      >
+                        <span>{format(day, 'd')}</span>
+                        {isTodayDay && (
+                          <motion.span
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-2 h-2 rounded-full bg-primary"
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <AnimatePresence>
+                          {dayEvents.slice(0, 3).map((event, eventIndex) => (
+                            <motion.div
+                              key={event.id}
+                              initial={{ opacity: 0, x: -5 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: eventIndex * 0.05 }}
+                            >
+                              <EventBlock
+                                event={event}
+                                variant="month"
+                                onClick={() => handleEventClick(event)}
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                        {dayEvents.length > 3 && (
+                          <Tooltip content={`${dayEvents.length - 3} more events`}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDayClick(day)
+                              }}
+                              className="text-xs text-text-tertiary hover:text-primary px-1.5 py-0.5 rounded hover:bg-background-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                              +{dayEvents.length - 3} more
+                            </button>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
 
-      {/* Week View - Placeholder */}
-      {viewMode === 'week' && (
-        <div className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary">
-          Week view coming soon
-        </div>
-      )}
+        {viewMode === 'week' && (
+          <motion.div
+            key="week"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary"
+          >
+            Week view coming soon
+          </motion.div>
+        )}
 
-      {/* Day View - Placeholder */}
-      {viewMode === 'day' && (
-        <div className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary">
-          Day view coming soon
-        </div>
-      )}
+        {viewMode === 'day' && (
+          <motion.div
+            key="day"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-background-secondary border border-background-tertiary rounded-lg p-6 text-center text-text-tertiary"
+          >
+            Day view coming soon
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
-

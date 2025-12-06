@@ -44,6 +44,34 @@ export default {
           tertiary: '#9ca3af',
         },
       },
+      animation: {
+        'fadeIn': 'fadeIn 0.3s ease-in-out',
+        'slideUp': 'slideUp 0.3s ease-out',
+        'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
+        'scale-in': 'scaleIn 0.2s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'pulse-subtle': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
+        },
+        scaleIn: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+      },
+      scale: {
+        '102': '1.02',
+        '98': '0.98',
+      },
     },
   },
   plugins: [],
