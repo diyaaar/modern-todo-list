@@ -35,24 +35,8 @@ export function CalendarPage() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  // Sidebar state: closed by default on mobile, open on desktop
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 // Open on desktop (>= 768px), closed on mobile
-    }
-    return true
-  })
-  
-  // Update sidebar state when window resizes
-  useEffect(() => {
-    const handleResize = () => {
-      const isDesktop = window.innerWidth >= 768
-      setSidebarOpen(isDesktop)
-    }
-    
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  // Sidebar state: closed by default on both mobile and desktop
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars, updateCurrentDate } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
@@ -252,9 +236,16 @@ export function CalendarPage() {
       {/* Calendar Sidebar */}
       <CalendarSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-      <div
+      <motion.div
         ref={calendarRef}
         className="flex-1 space-y-4 sm:space-y-6 min-w-0"
+        animate={{
+          marginLeft: sidebarOpen ? 0 : 0, // Sidebar width is handled by flexbox
+        }}
+        transition={{
+          duration: 0.35,
+          ease: [0.4, 0.0, 0.2, 1],
+        }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
