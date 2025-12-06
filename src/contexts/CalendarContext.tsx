@@ -50,11 +50,31 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         .from('google_calendar_tokens')
         .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle() // Use maybeSingle() instead of single() to handle no rows gracefully
 
-      setIsAuthenticated(!error && !!data)
+      // Handle different error cases
+      if (error) {
+        // PGRST116 means no rows found (which is fine - user just hasn't connected)
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          setIsAuthenticated(false)
+          return
+        }
+        // PGRST301 means table doesn't exist or RLS is blocking
+        // For 406 errors, the message usually contains "Not Acceptable"
+        if (error.code === 'PGRST301' || error.message?.includes('Not Acceptable') || error.message?.includes('406')) {
+          console.warn('Google Calendar tokens table may not exist yet:', error.message)
+          setIsAuthenticated(false)
+          return
+        }
+        console.error('Error checking Google Calendar auth status:', error)
+        setIsAuthenticated(false)
+        return
+      }
+
+      setIsAuthenticated(!!data)
     } catch (err) {
-      console.error('Error checking auth status:', err)
+      // Handle network errors or other exceptions gracefully
+      console.warn('Error checking Google Calendar auth status (table may not exist):', err)
       setIsAuthenticated(false)
     }
   }, [user])
