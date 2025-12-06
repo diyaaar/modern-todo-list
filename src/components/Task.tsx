@@ -316,27 +316,47 @@ export function Task({ task, depth = 0 }: TaskProps) {
       }
 
       // Get workspace color
-      const workspace = task.workspace_id 
+      // First try to find workspace by task's workspace_id
+      let workspace = task.workspace_id 
         ? workspaces.find(w => w.id === task.workspace_id)
         : null
+      
+      // Fallback: if workspace not found, use current workspace (for backward compatibility)
+      if (!workspace && workspaces.length > 0) {
+        workspace = workspaces[0]
+        console.log('[Add to Calendar] Task workspace not found, using current workspace:', workspace)
+      }
+      
       const workspaceColor = workspace?.color || null
       const colorId = getColorId(workspaceColor)
 
-      // Prepare payload
+      // Debug logging
+      console.log('[Add to Calendar] Task workspace_id:', task.workspace_id)
+      console.log('[Add to Calendar] Available workspaces:', workspaces.length)
+      console.log('[Add to Calendar] Found workspace:', workspace?.name || 'none')
+      console.log('[Add to Calendar] Workspace color:', workspaceColor)
+      console.log('[Add to Calendar] Color ID:', colorId)
+
+      // Prepare payload - use 'date' field name as expected by n8n
       const payload: {
         summary: string
         description: string
-        time: string
+        date: string
         colorId?: number
       } = {
         summary: task.title,
-        time: dateString,
+        date: dateString,
         description: task.description || '',
       }
 
-      // Add colorId if available
+      // Always include colorId if we have a valid workspace color
+      // Default to 8 (Light Gray) if workspace exists but color not found in mapping
       if (colorId !== null) {
         payload.colorId = colorId
+      } else if (workspace && workspaceColor) {
+        // Workspace exists with a color, but it's not in our mapping
+        // This shouldn't happen with the new palette, but handle gracefully
+        console.warn('[Add to Calendar] Workspace color not in mapping:', workspaceColor)
       }
 
       // Send to webhook via proxy endpoint (avoids CORS issues)
