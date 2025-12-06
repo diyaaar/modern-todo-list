@@ -25,6 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Log incoming request for debugging
+    console.log('[Calendar Webhook] Received request body:', JSON.stringify(req.body, null, 2))
+    
     const { summary, time, description, colorId } = req.body
 
     if (!summary) {
@@ -56,7 +59,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Add colorId if provided (as number, not string)
     if (colorId !== undefined && colorId !== null) {
       payload.colorId = typeof colorId === 'string' ? parseInt(colorId, 10) : colorId
+      console.log('[Calendar Webhook] Added colorId to payload:', payload.colorId)
+    } else {
+      console.warn('[Calendar Webhook] No colorId provided in request')
     }
+
+    console.log('[Calendar Webhook] Forwarding payload to n8n:', JSON.stringify(payload, null, 2))
 
     // Forward the request to the webhook with authentication header
     const response = await fetch(WEBHOOK_URL, {

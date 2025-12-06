@@ -53,7 +53,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const { showToast } = useToast()
   const { showSnackbar } = useUndoSnackbar()
   const { user } = useAuth()
-  const { workspaces } = useWorkspaces()
+  const { workspaces, currentWorkspaceId } = useWorkspaces()
   // Persist expand/collapse state in localStorage
   const getStoredExpandedState = (): boolean => {
     try {
@@ -316,11 +316,24 @@ export function Task({ task, depth = 0 }: TaskProps) {
       }
 
       // Get workspace color
-      const workspace = task.workspace_id 
+      // First try to find workspace by task's workspace_id
+      let workspace = task.workspace_id 
         ? workspaces.find(w => w.id === task.workspace_id)
         : null
+      
+      // Fallback: if workspace not found, use current workspace
+      if (!workspace && currentWorkspaceId) {
+        workspace = workspaces.find(w => w.id === currentWorkspaceId) || null
+      }
+      
       const workspaceColor = workspace?.color || null
       const colorId = getColorId(workspaceColor)
+
+      // Debug logging
+      console.log('[Add to Calendar] Task workspace_id:', task.workspace_id)
+      console.log('[Add to Calendar] Found workspace:', workspace)
+      console.log('[Add to Calendar] Workspace color:', workspaceColor)
+      console.log('[Add to Calendar] Color ID:', colorId)
 
       // Prepare payload
       const payload: {
@@ -335,9 +348,14 @@ export function Task({ task, depth = 0 }: TaskProps) {
       }
 
       // Add colorId if available
-      if (colorId !== null) {
+      if (colorId !== null && colorId !== undefined) {
         payload.colorId = colorId
+        console.log('[Add to Calendar] Added colorId to payload:', colorId)
+      } else {
+        console.warn('[Add to Calendar] No colorId available - workspace:', workspace, 'color:', workspaceColor)
       }
+
+      console.log('[Add to Calendar] Final payload:', JSON.stringify(payload, null, 2))
 
       // Send to webhook via proxy endpoint (avoids CORS issues)
       const response = await fetch('/api/calendar-webhook', {
