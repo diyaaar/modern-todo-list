@@ -38,7 +38,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
       className="bg-background-secondary border border-background-tertiary rounded-lg overflow-hidden"
     >
       {/* Header with day names */}
-      <div className="grid grid-cols-8 border-b border-background-tertiary">
+      <div className="grid grid-cols-8 border-b border-background-tertiary bg-background-tertiary/30">
         <div className="p-3 border-r border-background-tertiary"></div>
         {weekDays.map((day) => {
           const dayEvents = weekEvents.filter(e => {
@@ -53,19 +53,21 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
               onClick={() => onDayClick(day)}
               className={`
                 p-3 border-r border-background-tertiary last:border-r-0 cursor-pointer transition-colors
-                ${isTodayDay ? 'bg-primary/10 border-b-2 border-b-primary' : 'hover:bg-background-tertiary'}
+                ${isTodayDay ? 'bg-primary/10 border-b-2 border-b-primary' : 'hover:bg-background-tertiary/50'}
               `}
             >
               <div className="text-center">
-                <div className={`text-xs font-medium ${isTodayDay ? 'text-primary' : 'text-text-tertiary'}`}>
+                <div className={`text-xs font-semibold uppercase tracking-wide ${isTodayDay ? 'text-primary' : 'text-text-tertiary'}`}>
                   {format(day, 'EEE')}
                 </div>
-                <div className={`text-lg font-bold mt-1 ${isTodayDay ? 'text-primary' : 'text-text-primary'}`}>
+                <div className={`text-xl font-bold mt-1.5 ${isTodayDay ? 'text-primary' : 'text-text-primary'}`}>
                   {format(day, 'd')}
                 </div>
-                <div className="text-xs text-text-tertiary mt-1">
-                  {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
-                </div>
+                {dayEvents.length > 0 && (
+                  <div className="text-xs text-text-tertiary mt-1.5 font-medium">
+                    {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -73,7 +75,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
       </div>
 
       {/* Time slots and events */}
-      <div className="relative overflow-y-auto max-h-[600px]">
+      <div className="relative overflow-y-auto max-h-[70vh]">
         {/* Current time indicator */}
         {isCurrentWeek && currentTimePosition !== null && (
           <div
@@ -158,7 +160,7 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
                         onClick={() => onEventClick(event)}
                       >
                         <div
-                          className="h-full rounded px-2 py-0.5 text-xs overflow-hidden"
+                          className="h-full rounded px-2 py-0.5 text-xs overflow-hidden hover:shadow-md transition-shadow"
                           style={{
                             backgroundColor: `${eventColor}20`,
                             borderLeft: `3px solid ${eventColor}`,

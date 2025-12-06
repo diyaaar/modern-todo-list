@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { format, isSameDay } from 'date-fns'
-import { X, Plus, Clock } from 'lucide-react'
+import { X, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
 import { EventBlock } from './EventBlock'
@@ -10,10 +10,10 @@ interface DayModalProps {
   onClose: () => void
   date: Date
   events: CalendarEvent[]
-  onCreateEvent?: (date: Date) => void
+  onEventClick?: (event: CalendarEvent) => void
 }
 
-export function DayModal({ isOpen, onClose, date, events, onCreateEvent }: DayModalProps) {
+export function DayModal({ isOpen, onClose, date, events, onEventClick }: DayModalProps) {
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -92,8 +92,8 @@ export function DayModal({ isOpen, onClose, date, events, onCreateEvent }: DayMo
                     event={event}
                     variant="day"
                     onClick={() => {
-                      // TODO: Open event details
-                      console.log('Event clicked:', event)
+                      onEventClick?.(event)
+                      onClose()
                     }}
                   />
                 </motion.div>
@@ -101,19 +101,6 @@ export function DayModal({ isOpen, onClose, date, events, onCreateEvent }: DayMo
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-background-tertiary">
-            <button
-              onClick={() => {
-                onCreateEvent?.(date)
-                onClose()
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-dark text-white rounded-lg transition-all duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              <Plus className="w-5 h-5" />
-              Add Event
-            </button>
-          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

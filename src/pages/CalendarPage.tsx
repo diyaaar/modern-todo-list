@@ -23,16 +23,17 @@ import { useToast } from '../contexts/ToastContext'
 import { EventBlock } from '../components/calendar/EventBlock'
 import { Tooltip } from '../components/calendar/Tooltip'
 import { DayModal } from '../components/calendar/DayModal'
+import { EventDetailsModal } from '../components/calendar/EventDetailsModal'
 import { calendarTheme } from '../config/calendarTheme'
 import { WeekView } from '../components/calendar/WeekView'
-import { DayView } from '../components/calendar/DayView'
-import { getEventsForWeek, getEventsForDay } from '../utils/calendarUtils'
+import { getEventsForWeek } from '../utils/calendarUtils'
 
 export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month')
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month')
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
@@ -90,14 +91,10 @@ export function CalendarPage() {
           e.preventDefault()
           setViewMode('week')
           break
-        case 'd':
-        case 'D':
-          e.preventDefault()
-          setViewMode('day')
-          break
         case 'Escape':
           setShowShortcuts(false)
           setSelectedDate(null)
+          setSelectedEvent(null)
           break
       }
     }
@@ -147,8 +144,6 @@ export function CalendarPage() {
       setCurrentDate(subMonths(currentDate, 1))
     } else if (viewMode === 'week') {
       setCurrentDate(addDays(currentDate, -7))
-    } else if (viewMode === 'day') {
-      setCurrentDate(addDays(currentDate, -1))
     }
   }
 
@@ -157,8 +152,6 @@ export function CalendarPage() {
       setCurrentDate(addMonths(currentDate, 1))
     } else if (viewMode === 'week') {
       setCurrentDate(addDays(currentDate, 7))
-    } else if (viewMode === 'day') {
-      setCurrentDate(addDays(currentDate, 1))
     }
   }
 
@@ -178,8 +171,7 @@ export function CalendarPage() {
   }
 
   const handleEventClick = (event: CalendarEvent) => {
-    // TODO: Open event details modal
-    console.log('Event clicked:', event)
+    setSelectedEvent(event)
   }
 
   const handleDayClick = (date: Date) => {
@@ -236,12 +228,10 @@ export function CalendarPage() {
           <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
             {viewMode === 'month' && format(currentDate, 'MMMM yyyy')}
             {viewMode === 'week' && `Week of ${format(startOfWeek(currentDate, weekOptions), 'MMM d')}`}
-            {viewMode === 'day' && format(currentDate, 'EEEE, MMMM d, yyyy')}
           </h2>
           <p className="text-sm text-text-tertiary">
             {viewMode === 'month' && `${events.length} event${events.length !== 1 ? 's' : ''} this month`}
             {viewMode === 'week' && `${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length} event${getEventsForWeek(events, startOfWeek(currentDate, weekOptions)).length !== 1 ? 's' : ''} this week`}
-            {viewMode === 'day' && `${getEventsForDay(events, currentDate).length} event${getEventsForDay(events, currentDate).length !== 1 ? 's' : ''} today`}
           </p>
         </div>
 
@@ -277,21 +267,6 @@ export function CalendarPage() {
               aria-label="Week view"
             >
               Week
-            </button>
-            <button
-              onClick={() => setViewMode('day')}
-              className={`
-                px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-secondary
-                ${
-                  viewMode === 'day'
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
-                }
-              `}
-              aria-label="Day view"
-            >
-              Day
             </button>
           </div>
 
@@ -380,10 +355,6 @@ export function CalendarPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">Week view</span>
                   <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">W</kbd>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-text-secondary">Day view</span>
-                  <kbd className="px-2 py-1 bg-background-tertiary rounded text-text-primary">D</kbd>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">Close</span>
@@ -546,19 +517,6 @@ export function CalendarPage() {
             weekOptions={weekOptions}
           />
         )}
-
-        {viewMode === 'day' && (
-          <DayView
-            currentDate={currentDate}
-            events={events}
-            loading={loading}
-            onEventClick={handleEventClick}
-            onCreateEvent={(date) => {
-              // TODO: Open create event form
-              console.log('Create event for:', date)
-            }}
-          />
-        )}
       </AnimatePresence>
 
       {/* Day Modal */}
@@ -568,10 +526,16 @@ export function CalendarPage() {
           onClose={() => setSelectedDate(null)}
           date={selectedDate}
           events={events}
-          onCreateEvent={(date) => {
-            // TODO: Open create event form
-            console.log('Create event for:', date)
-          }}
+          onEventClick={handleEventClick}
+        />
+      )}
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <EventDetailsModal
+          isOpen={!!selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          event={selectedEvent}
         />
       )}
     </div>
