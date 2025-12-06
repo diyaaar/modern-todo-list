@@ -86,8 +86,8 @@ export function HomePage() {
         />
       )}
 
-      {/* Workspace Navigation */}
-      <WorkspaceNavigation />
+      {/* Workspace Navigation - Only show on Tasks view, not Calendar */}
+      {viewMode === 'tasks' && <WorkspaceNavigation />}
 
       {/* Tab Navigation */}
       <div className="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4">

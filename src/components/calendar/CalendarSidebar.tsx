@@ -8,33 +8,20 @@ interface CalendarSidebarProps {
   onToggle: () => void
 }
 
-const SIDEBAR_STORAGE_KEY = 'calendar-sidebar-expanded'
 
 export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
   const { calendars, selectedCalendarIds, toggleCalendar, loading } = useCalendar()
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY)
-    return saved !== null ? saved === 'true' : true
-  })
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(isExpanded))
-  }, [isExpanded])
-
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded)
-  }
 
   return (
     <>
-      {/* Mobile Toggle Button - Always visible on mobile when sidebar is closed */}
+      {/* Toggle Button - Visible when sidebar is closed (both mobile and desktop) */}
       {!isOpen && (
         <motion.button
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -10 }}
           onClick={onToggle}
-          className="fixed left-2 top-20 z-50 p-3 bg-background-secondary border border-background-tertiary rounded-lg shadow-lg hover:bg-background-tertiary active:bg-background-tertiary/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
+          className="fixed left-2 top-20 z-50 p-3 bg-background-secondary border border-background-tertiary rounded-lg shadow-lg hover:bg-background-tertiary active:bg-background-tertiary/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Open calendar list"
         >
           <Menu className="w-5 h-5 text-text-primary" />
@@ -42,7 +29,7 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
       )}
 
       {/* Sidebar */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isOpen && (
           <>
             {/* Mobile Backdrop - Click to close */}
@@ -66,8 +53,14 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                 shadow-xl flex flex-col overflow-hidden
                 w-[50vw] max-w-[280px] min-w-[240px]
                 md:relative md:shadow-none md:z-auto md:w-[256px]
-                md:translate-x-0 md:initial-none
               `}
+              style={{
+                // On desktop, don't slide - just show/hide
+                ...(typeof window !== 'undefined' && window.innerWidth >= 768 && {
+                  x: 0,
+                  initial: false
+                })
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -77,25 +70,14 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
                   <h3 className="text-lg font-bold text-text-primary">Calendars</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Desktop: Collapse/Expand button */}
-                  <button
-                    onClick={handleToggle}
-                    className="hidden md:flex p-1.5 hover:bg-background-tertiary rounded-lg transition-colors flex-shrink-0"
-                    aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-                  >
-                    {isExpanded ? (
-                      <ChevronLeft className="w-4 h-4 text-text-tertiary" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-text-tertiary" />
-                    )}
-                  </button>
-                  {/* Mobile: Close button */}
+                  {/* Toggle sidebar open/close - Works on both mobile and desktop */}
                   <button
                     onClick={onToggle}
-                    className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors md:hidden flex-shrink-0 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors flex-shrink-0 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Close sidebar"
                   >
-                    <X className="w-5 h-5 text-text-tertiary" />
+                    <X className="w-5 h-5 text-text-tertiary md:hidden" />
+                    <ChevronLeft className="w-4 h-4 text-text-tertiary hidden md:block" />
                   </button>
                 </div>
               </div>
