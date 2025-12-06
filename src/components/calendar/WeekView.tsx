@@ -42,34 +42,25 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
     return null
   })
 
-  // Update current time position every second (only if viewing current week and today)
+  // Update current time position every minute (only if viewing current week and today)
   useEffect(() => {
     if (!isCurrentWeek || !isViewingToday) {
-      console.log('[WeekView] Not showing time indicator:', { isCurrentWeek, isViewingToday })
       setCurrentTimePosition(null)
       return
     }
     
-    console.log('[WeekView] Setting up time indicator updates')
-    
     const updateTime = () => {
-      // Force a new Date object to get the most current time
-      // This ensures we're always using the browser's current local time
-      const position = getCurrentTimePosition(8)
-      console.log('[WeekView] Updated time position:', position)
+      const position = getCurrentTimePosition(8, 22)
       setCurrentTimePosition(position)
     }
     
     // Update immediately
     updateTime()
     
-    // Update every second for smooth movement and accuracy
-    const interval = setInterval(updateTime, 1000)
+    // Update every minute
+    const interval = setInterval(updateTime, 60000)
     
-    return () => {
-      console.log('[WeekView] Cleaning up time indicator interval')
-      clearInterval(interval)
-    }
+    return () => clearInterval(interval)
   }, [isCurrentWeek, isViewingToday])
 
   if (loading) {
@@ -126,20 +117,12 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
       </div>
 
       {/* Time slots and events */}
-      <div 
-        className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0"
-        id="week-view-timeline-container"
-      >
+      <div className="relative overflow-y-auto overflow-x-auto max-h-[60vh] sm:max-h-[70vh] -mx-2 sm:mx-0">
         {/* Current time indicator - only show if viewing today */}
         {isCurrentWeek && isViewingToday && currentTimePosition !== null && (
           <div
             className="absolute left-0 right-0 z-10 pointer-events-none"
-            style={{ 
-              top: `${currentTimePosition}%`,
-            }}
-            data-debug-position={currentTimePosition}
-            data-debug-time={new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-            title={`Current time indicator at ${currentTimePosition.toFixed(2)}% (Istanbul: ${new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hour12: false })})`}
+            style={{ top: `${currentTimePosition}%` }}
           >
             <div className="flex items-center">
               <div className="w-12 flex-shrink-0 flex items-center justify-end pr-2">
