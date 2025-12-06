@@ -121,32 +121,6 @@ export function CalendarPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Mobile swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return
-
-    const touchEndX = e.changedTouches[0].clientX
-    const touchEndY = e.changedTouches[0].clientY
-    const diffX = touchStartX.current - touchEndX
-    const diffY = Math.abs(touchStartY.current - touchEndY)
-    const threshold = 50
-
-    if (Math.abs(diffX) > threshold && diffY < threshold) {
-      if (diffX > 0) {
-        handleNextMonth()
-      } else {
-        handlePreviousMonth()
-      }
-    }
-
-    touchStartX.current = null
-    touchStartY.current = null
-  }
 
   // Week starts on Monday (weekStartsOn: 1)
   const weekOptions = { weekStartsOn: 1 as const }
