@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarEvent } from '../../contexts/CalendarContext'
