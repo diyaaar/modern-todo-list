@@ -34,6 +34,7 @@ interface CalendarContextType {
   connectGoogleCalendar: () => Promise<void>
   disconnectGoogleCalendar: () => Promise<void>
   syncEventsInBackground: (date: Date) => Promise<void>
+  updateCurrentDate: (date: Date) => void
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
@@ -63,6 +64,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const eventsCacheRef = useRef<Map<string, { events: CalendarEvent[], timestamp: number }>>(new Map())
   const hasLoadedOnceRef = useRef(false)
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const currentDateRef = useRef<Date>(new Date())
 
   // Check if user is authenticated with Google Calendar
   const checkAuthStatus = useCallback(async () => {
@@ -255,6 +258,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
     const cacheKey = `${startOfMonth.toISOString()}-${endOfMonth.toISOString()}`
     
+    // Update current date ref for background sync
+    currentDateRef.current = date
+    
     // Check cache first
     const cached = eventsCacheRef.current.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < EVENTS_CACHE_EXPIRY) {
@@ -321,7 +327,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user, showToast, initialLoad])
   
-  // Background sync: refresh events silently
+  // Background sync: refresh events silently and detect changes
   const syncEventsInBackground = useCallback(async (date: Date) => {
     if (!isAuthenticated || !user || !hasLoadedOnceRef.current) return
     
@@ -348,20 +354,89 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         const data = await response.json()
         const fetchedEvents = data.events || []
         
-        // Update cache
-        eventsCacheRef.current.set(cacheKey, {
-          events: fetchedEvents,
-          timestamp: Date.now()
-        })
+        // Compare with current events to detect changes
+        const currentEvents = events
+        const eventsChanged = 
+          currentEvents.length !== fetchedEvents.length ||
+          currentEvents.some((currentEvent: CalendarEvent) => {
+            const fetchedEvent = fetchedEvents.find((e: CalendarEvent) => e.id === currentEvent.id)
+            if (!fetchedEvent) return true // Event was deleted
+            // Check if event was updated (compare key fields)
+            return (
+              currentEvent.summary !== fetchedEvent.summary ||
+              currentEvent.start !== fetchedEvent.start ||
+              currentEvent.end !== fetchedEvent.end ||
+              currentEvent.description !== fetchedEvent.description ||
+              currentEvent.location !== fetchedEvent.location ||
+              currentEvent.color !== fetchedEvent.color
+            )
+          }) ||
+          fetchedEvents.some((fetchedEvent: CalendarEvent) => {
+            // Check for new events
+            return !currentEvents.find((e: CalendarEvent) => e.id === fetchedEvent.id)
+          })
         
-        // Silently update events without showing loading
-        setEvents(fetchedEvents)
+        // Only update if there are actual changes
+        if (eventsChanged) {
+          // Update cache
+          eventsCacheRef.current.set(cacheKey, {
+            events: fetchedEvents,
+            timestamp: Date.now()
+          })
+          
+          // Silently update events without showing loading
+          setEvents(fetchedEvents)
+        } else {
+          // Update cache timestamp even if no changes (to keep cache fresh)
+          eventsCacheRef.current.set(cacheKey, {
+            events: fetchedEvents,
+            timestamp: Date.now()
+          })
+        }
       }
     } catch (err) {
       // Silently fail in background sync
       console.warn('Background sync failed:', err)
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, events])
+  
+  // Start periodic auto-sync
+  useEffect(() => {
+    if (!isAuthenticated || !user || !hasLoadedOnceRef.current) {
+      // Clear interval if not authenticated
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+        syncIntervalRef.current = null
+      }
+      return
+    }
+    
+    // Sync every 3 minutes (180000 ms)
+    const SYNC_INTERVAL = 3 * 60 * 1000
+    
+    // Initial sync after a short delay
+    const initialTimeout = setTimeout(() => {
+      syncEventsInBackground(currentDateRef.current)
+    }, 30000) // First sync after 30 seconds
+    
+    // Set up periodic sync
+    syncIntervalRef.current = setInterval(() => {
+      syncEventsInBackground(currentDateRef.current)
+    }, SYNC_INTERVAL)
+    
+    return () => {
+      clearTimeout(initialTimeout)
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+        syncIntervalRef.current = null
+      }
+    }
+  }, [isAuthenticated, user, hasLoadedOnceRef.current, syncEventsInBackground])
+  
+  // Update current date ref when date changes
+  const updateCurrentDate = useCallback((date: Date) => {
+    currentDateRef.current = date
+  }, [])
 
   const createEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> => {
     if (!isAuthenticated) return null
@@ -461,6 +536,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     connectGoogleCalendar,
     disconnectGoogleCalendar,
     syncEventsInBackground,
+    updateCurrentDate,
   }), [
     filteredEvents,
     calendars,
@@ -478,6 +554,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     connectGoogleCalendar,
     disconnectGoogleCalendar,
     syncEventsInBackground,
+    updateCurrentDate,
   ])
 
   return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>

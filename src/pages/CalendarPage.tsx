@@ -36,7 +36,7 @@ export function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars } = useCalendar()
+  const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars, updateCurrentDate } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
@@ -48,12 +48,14 @@ export function CalendarPage() {
       fetchCalendars()
       // Only show loading on initial load
       fetchEvents(currentDate, true)
+      updateCurrentDate(currentDate)
     }
   }, [isAuthenticated]) // Only depend on isAuthenticated, not currentDate
   
-  // Background sync when date changes (no loading state)
+  // Update current date for background sync when date changes
   useEffect(() => {
     if (isAuthenticated) {
+      updateCurrentDate(currentDate)
       // Use a small delay to batch rapid date changes
       const timeoutId = setTimeout(() => {
         fetchEvents(currentDate, false) // Don't show loading
@@ -61,7 +63,7 @@ export function CalendarPage() {
       
       return () => clearTimeout(timeoutId)
     }
-  }, [currentDate, isAuthenticated, fetchEvents])
+  }, [currentDate, isAuthenticated, fetchEvents, updateCurrentDate])
 
   // Handle OAuth callback
   useEffect(() => {
