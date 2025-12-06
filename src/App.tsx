@@ -6,6 +6,7 @@ import { TagsProvider } from './contexts/TagsContext'
 import { AttachmentsProvider } from './contexts/AttachmentsContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { UndoSnackbarProvider } from './contexts/UndoSnackbarContext'
+import { CalendarProvider } from './contexts/CalendarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
@@ -36,9 +37,11 @@ function App() {
                       <TagsProvider>
                         <AttachmentsProvider>
                           <TasksProvider>
-                            <Layout>
-                              <HomePage />
-                            </Layout>
+                            <CalendarProvider>
+                              <Layout>
+                                <HomePage />
+                              </Layout>
+                            </CalendarProvider>
                           </TasksProvider>
                         </AttachmentsProvider>
                       </TagsProvider>
