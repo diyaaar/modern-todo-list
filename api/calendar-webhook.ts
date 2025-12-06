@@ -25,18 +25,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { summary, date, description, colorId } = req.body
+    const { summary, time, description, colorId } = req.body
 
     if (!summary) {
       return res.status(400).json({ error: 'summary is required' })
     }
 
-    if (!date) {
-      return res.status(400).json({ error: 'date is required' })
+    if (!time) {
+      return res.status(400).json({ error: 'time is required' })
     }
-
-    // Debug logging
-    console.log('[Calendar Webhook] Received payload:', { summary, date, description, colorId })
 
     // Prepare headers with authentication
     const headers: HeadersInit = {
@@ -44,32 +41,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'X-Webhook-Secret': WEBHOOK_SECRET,
     }
 
-    // Prepare payload for n8n webhook - use 'date' field name
+    // Prepare payload for n8n webhook
     const payload: {
       summary: string
       description: string
-      date: string
+      time: string
       colorId?: number
     } = {
       summary,
-      date,
+      time,
       description: description || '',
     }
 
     // Add colorId if provided (as number, not string)
     if (colorId !== undefined && colorId !== null) {
-      const numericColorId = typeof colorId === 'string' ? parseInt(colorId, 10) : colorId
-      if (!isNaN(numericColorId)) {
-        payload.colorId = numericColorId
-        console.log('[Calendar Webhook] Including colorId:', payload.colorId)
-      } else {
-        console.warn('[Calendar Webhook] Invalid colorId value:', colorId)
-      }
-    } else {
-      console.warn('[Calendar Webhook] colorId not provided in request')
+      payload.colorId = typeof colorId === 'string' ? parseInt(colorId, 10) : colorId
     }
-
-    console.log('[Calendar Webhook] Forwarding to n8n:', payload)
 
     // Forward the request to the webhook with authentication header
     const response = await fetch(WEBHOOK_URL, {
