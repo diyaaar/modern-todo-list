@@ -50,6 +50,8 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
     }
     
     const updateTime = () => {
+      // Force a new Date object to get the most current time
+      // This ensures we're always using the browser's current local time
       const position = getCurrentTimePosition(8)
       setCurrentTimePosition(position)
     }
@@ -58,7 +60,8 @@ export function WeekView({ currentDate, events, loading, onEventClick, onDayClic
     updateTime()
     
     // Update every minute for smooth movement
-    const interval = setInterval(updateTime, 60000)
+    // Also update every second for more precise positioning (optional, can be changed to 60000 for every minute)
+    const interval = setInterval(updateTime, 1000) // Update every second for accuracy
     
     return () => clearInterval(interval)
   }, [isCurrentWeek, isViewingToday])

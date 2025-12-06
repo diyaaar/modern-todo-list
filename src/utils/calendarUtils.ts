@@ -108,22 +108,52 @@ export function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[]
 
 /**
  * Get current time position in timeline
- * Uses local time to ensure accurate positioning based on user's timezone
+ * Uses local time to ensure accurate positioning based on user's timezone (Europe/Istanbul, UTC+3)
+ * 
+ * This function explicitly uses the browser's local timezone. The browser should be set to
+ * Europe/Istanbul (UTC+3) for accurate time display. If the browser timezone is incorrect,
+ * the user should set their system timezone to Istanbul.
  */
 export function getCurrentTimePosition(startHour = 8): number | null {
+  // Create a new Date object - this uses the browser's local timezone
   const now = new Date()
   
-  // Get local time components (not UTC) - these are already in user's timezone
-  // getHours(), getMinutes(), getSeconds() all return local time values
-  const localHours = now.getHours()
-  const localMinutes = now.getMinutes()
-  const localSeconds = now.getSeconds()
+  // Get timezone offset in minutes (negative for timezones ahead of UTC)
+  // Istanbul is UTC+3, so getTimezoneOffset() should return -180 (3 hours * 60 minutes)
+  const timezoneOffset = now.getTimezoneOffset() // Returns offset in minutes (UTC - local)
+  const timezoneOffsetHours = -timezoneOffset / 60 // Convert to hours (Istanbul should be +3)
+  
+  // Explicitly get local time components using the browser's timezone
+  // These methods return values in the browser's local timezone
+  // For Istanbul (UTC+3), this should correctly reflect local time
+  let localHours = now.getHours() // 0-23 in local time
+  let localMinutes = now.getMinutes() // 0-59 in local time
+  let localSeconds = now.getSeconds() // 0-59 in local time
+  
+  // If timezone offset suggests we're not in Istanbul timezone, log a warning
+  // Istanbul is UTC+3, so offset should be -180 minutes (or close to it, accounting for DST)
+  if (process.env.NODE_ENV === 'development') {
+    const expectedOffsetIstanbul = -180 // UTC+3 = -180 minutes
+    const offsetDiff = Math.abs(timezoneOffset - expectedOffsetIstanbul)
+    if (offsetDiff > 60) { // Allow 1 hour difference for DST
+      console.warn(
+        `[Time Indicator] Timezone offset is ${timezoneOffsetHours} hours (expected UTC+3 for Istanbul). ` +
+        `Current local time: ${localHours}:${localMinutes.toString().padStart(2, '0')}. ` +
+        `Please ensure your browser/system timezone is set to Europe/Istanbul.`
+      )
+    } else {
+      console.log(
+        `[Time Indicator] Local time: ${localHours}:${localMinutes.toString().padStart(2, '0')}:${localSeconds.toString().padStart(2, '0')} ` +
+        `(Timezone: UTC${timezoneOffsetHours >= 0 ? '+' : ''}${timezoneOffsetHours})`
+      )
+    }
+  }
   
   // Calculate total minutes from midnight (local time)
   // Include seconds for more precise positioning
   const totalMinutesFromMidnight = localHours * 60 + localMinutes + (localSeconds / 60)
   
-  // Calculate minutes from start of visible day (startHour:00)
+  // Calculate minutes from start of visible day (startHour:00 in local time)
   const startMinutes = startHour * 60
   const currentMinutes = totalMinutesFromMidnight - startMinutes
   const dayMinutes = (22 - startHour) * 60 // 8 AM to 10 PM = 14 hours = 840 minutes
