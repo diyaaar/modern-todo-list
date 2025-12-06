@@ -1,7 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
 import { Calendar as CalendarType } from '../types/calendar'
+
+const SELECTED_CALENDARS_STORAGE_KEY = 'calendar-selected-ids'
+const EVENTS_CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutes
 
 export interface CalendarEvent {
   id: string
@@ -22,7 +25,7 @@ interface CalendarContextType {
   loading: boolean
   error: string | null
   isAuthenticated: boolean
-  fetchEvents: (date: Date) => Promise<void>
+  fetchEvents: (date: Date, showLoading?: boolean) => Promise<void>
   fetchCalendars: () => Promise<void>
   toggleCalendar: (calendarId: string) => void
   createEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent | null>
@@ -30,6 +33,7 @@ interface CalendarContextType {
   deleteEvent: (id: string) => Promise<void>
   connectGoogleCalendar: () => Promise<void>
   disconnectGoogleCalendar: () => Promise<void>
+  syncEventsInBackground: (date: Date) => Promise<void>
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
@@ -39,10 +43,26 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [calendars, setCalendars] = useState<CalendarType[]>([])
-  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([])
+  
+  // Load selected calendar IDs from localStorage
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(SELECTED_CALENDARS_STORAGE_KEY)
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch (err) {
+      console.warn('Failed to load calendar selection from localStorage:', err)
+    }
+    return []
+  })
+  
   const [loading, setLoading] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const eventsCacheRef = useRef<Map<string, { events: CalendarEvent[], timestamp: number }>>(new Map())
+  const hasLoadedOnceRef = useRef(false)
 
   // Check if user is authenticated with Google Calendar
   const checkAuthStatus = useCallback(async () => {
@@ -133,9 +153,26 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
       setCalendars(data || [])
       
-      // If no calendars selected yet, select all by default
+      // If no calendars selected yet, check localStorage first, then select all by default
       if (selectedCalendarIds.length === 0 && data && data.length > 0) {
-        setSelectedCalendarIds(data.map(c => c.id))
+        try {
+          const saved = localStorage.getItem(SELECTED_CALENDARS_STORAGE_KEY)
+          if (saved) {
+            const savedIds = JSON.parse(saved)
+            // Only use saved IDs that still exist in calendars
+            const validIds = savedIds.filter((id: string) => data.some(c => c.id === id))
+            if (validIds.length > 0) {
+              setSelectedCalendarIds(validIds)
+              return
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load calendar selection from localStorage:', err)
+        }
+        // Default: select all calendars
+        const allIds = data.map(c => c.id)
+        setSelectedCalendarIds(allIds)
+        localStorage.setItem(SELECTED_CALENDARS_STORAGE_KEY, JSON.stringify(allIds))
       }
     } catch (err) {
       console.error('Error fetching calendars:', err)
@@ -143,16 +180,34 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [user, selectedCalendarIds.length])
 
-  // Toggle calendar visibility
+  // Toggle calendar visibility and persist to localStorage
   const toggleCalendar = useCallback((calendarId: string) => {
     setSelectedCalendarIds(prev => {
-      if (prev.includes(calendarId)) {
-        return prev.filter(id => id !== calendarId)
-      } else {
-        return [...prev, calendarId]
+      const newIds = prev.includes(calendarId)
+        ? prev.filter(id => id !== calendarId)
+        : [...prev, calendarId]
+      
+      // Persist to localStorage
+      try {
+        localStorage.setItem(SELECTED_CALENDARS_STORAGE_KEY, JSON.stringify(newIds))
+      } catch (err) {
+        console.warn('Failed to save calendar selection to localStorage:', err)
       }
+      
+      return newIds
     })
   }, [])
+  
+  // Persist selected calendar IDs whenever they change
+  useEffect(() => {
+    if (selectedCalendarIds.length > 0 || calendars.length > 0) {
+      try {
+        localStorage.setItem(SELECTED_CALENDARS_STORAGE_KEY, JSON.stringify(selectedCalendarIds))
+      } catch (err) {
+        console.warn('Failed to save calendar selection to localStorage:', err)
+      }
+    }
+  }, [selectedCalendarIds, calendars.length])
 
   // Initialize auth check and fetch calendars
   useEffect(() => {
@@ -193,16 +248,30 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [showToast])
 
-  const fetchEvents = useCallback(async (date: Date) => {
+  const fetchEvents = useCallback(async (date: Date, showLoading = false) => {
     if (!isAuthenticated || !user) return
 
-    setLoading(true)
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
+    const cacheKey = `${startOfMonth.toISOString()}-${endOfMonth.toISOString()}`
+    
+    // Check cache first
+    const cached = eventsCacheRef.current.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < EVENTS_CACHE_EXPIRY) {
+      setEvents(cached.events)
+      if (initialLoad) {
+        setInitialLoad(false)
+      }
+      return
+    }
+
+    // Only show loading on initial load or if explicitly requested
+    if (showLoading || initialLoad) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
-      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
-      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
-
       // Get Supabase session token for authentication
       const supabase = (await import('../lib/supabase')).getSupabaseClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -227,15 +296,72 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
-      setEvents(data.events || [])
+      const fetchedEvents = data.events || []
+      
+      // Cache the events
+      eventsCacheRef.current.set(cacheKey, {
+        events: fetchedEvents,
+        timestamp: Date.now()
+      })
+      
+      setEvents(fetchedEvents)
+      hasLoadedOnceRef.current = true
     } catch (err) {
       console.error('Error fetching events:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch events')
-      showToast('Failed to fetch calendar events', 'error', 3000)
+      // Only show toast on initial load or explicit errors
+      if (initialLoad || showLoading) {
+        showToast('Failed to fetch calendar events', 'error', 3000)
+      }
     } finally {
-      setLoading(false)
+      if (showLoading || initialLoad) {
+        setLoading(false)
+        setInitialLoad(false)
+      }
     }
-  }, [isAuthenticated, user, showToast])
+  }, [isAuthenticated, user, showToast, initialLoad])
+  
+  // Background sync: refresh events silently
+  const syncEventsInBackground = useCallback(async (date: Date) => {
+    if (!isAuthenticated || !user || !hasLoadedOnceRef.current) return
+    
+    try {
+      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
+      const cacheKey = `${startOfMonth.toISOString()}-${endOfMonth.toISOString()}`
+      
+      const supabase = (await import('../lib/supabase')).getSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) return
+
+      const response = await fetch(
+        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const fetchedEvents = data.events || []
+        
+        // Update cache
+        eventsCacheRef.current.set(cacheKey, {
+          events: fetchedEvents,
+          timestamp: Date.now()
+        })
+        
+        // Silently update events without showing loading
+        setEvents(fetchedEvents)
+      }
+    } catch (err) {
+      // Silently fail in background sync
+      console.warn('Background sync failed:', err)
+    }
+  }, [isAuthenticated, user])
 
   const createEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> => {
     if (!isAuthenticated) return null
@@ -309,18 +435,37 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, showToast])
 
-  // Filter events by selected calendars
-  const filteredEvents = events.filter(event => {
-    // If event has no calendarId, show it (for backward compatibility)
-    if (!event.calendarId) return true
-    // Only show events from selected calendars
-    return selectedCalendarIds.includes(event.calendarId)
-  })
+  // Filter events by selected calendars (memoized for performance)
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      // If event has no calendarId, show it (for backward compatibility)
+      if (!event.calendarId) return true
+      // Only show events from selected calendars
+      return selectedCalendarIds.includes(event.calendarId)
+    })
+  }, [events, selectedCalendarIds])
 
-  const value = {
+  const value = useMemo(() => ({
     events: filteredEvents,
     calendars,
     selectedCalendarIds,
+    loading: initialLoad ? loading : false, // Only show loading on initial load
+    error,
+    isAuthenticated,
+    fetchEvents,
+    fetchCalendars,
+    toggleCalendar,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    connectGoogleCalendar,
+    disconnectGoogleCalendar,
+    syncEventsInBackground,
+  }), [
+    filteredEvents,
+    calendars,
+    selectedCalendarIds,
+    initialLoad,
     loading,
     error,
     isAuthenticated,
@@ -332,7 +477,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     deleteEvent,
     connectGoogleCalendar,
     disconnectGoogleCalendar,
-  }
+    syncEventsInBackground,
+  ])
 
   return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>
 }

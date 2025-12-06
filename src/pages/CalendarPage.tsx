@@ -42,12 +42,26 @@ export function CalendarPage() {
   const touchStartY = useRef<number | null>(null)
   const calendarRef = useRef<HTMLDivElement>(null)
 
+  // Load data once on mount or when authentication changes
   useEffect(() => {
     if (isAuthenticated) {
       fetchCalendars()
-      fetchEvents(currentDate)
+      // Only show loading on initial load
+      fetchEvents(currentDate, true)
     }
-  }, [currentDate, isAuthenticated, fetchEvents, fetchCalendars])
+  }, [isAuthenticated]) // Only depend on isAuthenticated, not currentDate
+  
+  // Background sync when date changes (no loading state)
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Use a small delay to batch rapid date changes
+      const timeoutId = setTimeout(() => {
+        fetchEvents(currentDate, false) // Don't show loading
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [currentDate, isAuthenticated, fetchEvents])
 
   // Handle OAuth callback
   useEffect(() => {
