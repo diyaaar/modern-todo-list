@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { Calendar as CalendarType } from '../types/calendar'
 
 export interface CalendarEvent {
   id: string
@@ -11,14 +12,19 @@ export interface CalendarEvent {
   color?: string
   colorId?: string
   location?: string
+  calendarId?: string // ID of the calendar this event belongs to
 }
 
 interface CalendarContextType {
   events: CalendarEvent[]
+  calendars: CalendarType[]
+  selectedCalendarIds: string[]
   loading: boolean
   error: string | null
   isAuthenticated: boolean
   fetchEvents: (date: Date) => Promise<void>
+  fetchCalendars: () => Promise<void>
+  toggleCalendar: (calendarId: string) => void
   createEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent | null>
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>
   deleteEvent: (id: string) => Promise<void>
@@ -32,6 +38,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { showToast } = useToast()
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [calendars, setCalendars] = useState<CalendarType[]>([])
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -79,10 +87,78 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  // Initialize auth check
+  // Fetch calendars
+  const fetchCalendars = useCallback(async () => {
+    if (!user) {
+      setCalendars([])
+      return
+    }
+
+    try {
+      // First try to sync calendars from Google Calendar
+      const syncResponse = await fetch(`/api/calendar/calendars?user_id=${user.id}`, {
+        method: 'POST',
+      })
+
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json()
+        if (syncData.calendars && syncData.calendars.length > 0) {
+          setCalendars(syncData.calendars)
+          // If no calendars selected yet, select all by default
+          if (selectedCalendarIds.length === 0) {
+            setSelectedCalendarIds(syncData.calendars.map((c: CalendarType) => c.id))
+          }
+          return
+        }
+      }
+
+      // Fallback: fetch from database directly
+      const supabase = (await import('../lib/supabase')).getSupabaseClient()
+      const { data, error } = await supabase
+        .from('calendars')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_primary', { ascending: false })
+        .order('name', { ascending: true })
+
+      if (error) {
+        // If table doesn't exist yet, that's okay - user just needs to create calendars
+        if (error.code === 'PGRST301' || error.message?.includes('Not Acceptable') || error.message?.includes('406')) {
+          console.warn('Calendars table may not exist yet:', error.message)
+          setCalendars([])
+          return
+        }
+        throw error
+      }
+
+      setCalendars(data || [])
+      
+      // If no calendars selected yet, select all by default
+      if (selectedCalendarIds.length === 0 && data && data.length > 0) {
+        setSelectedCalendarIds(data.map(c => c.id))
+      }
+    } catch (err) {
+      console.error('Error fetching calendars:', err)
+      setCalendars([])
+    }
+  }, [user, selectedCalendarIds.length])
+
+  // Toggle calendar visibility
+  const toggleCalendar = useCallback((calendarId: string) => {
+    setSelectedCalendarIds(prev => {
+      if (prev.includes(calendarId)) {
+        return prev.filter(id => id !== calendarId)
+      } else {
+        return [...prev, calendarId]
+      }
+    })
+  }, [])
+
+  // Initialize auth check and fetch calendars
   useEffect(() => {
     checkAuthStatus()
-  }, [checkAuthStatus])
+    fetchCalendars()
+  }, [checkAuthStatus, fetchCalendars])
 
   const connectGoogleCalendar = useCallback(async () => {
     try {
@@ -135,8 +211,13 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         throw new Error('Not authenticated')
       }
 
+      // Build query with selected calendar IDs
+      const calendarIdsParam = selectedCalendarIds.length > 0 
+        ? `&calendarIds=${selectedCalendarIds.join(',')}`
+        : ''
+
       const response = await fetch(
-        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}`,
+        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}${calendarIdsParam}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -157,7 +238,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, user, showToast])
+  }, [isAuthenticated, user, selectedCalendarIds, showToast])
 
   const createEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> => {
     if (!isAuthenticated) return null
@@ -231,12 +312,24 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, showToast])
 
+  // Filter events by selected calendars
+  const filteredEvents = events.filter(event => {
+    // If event has no calendarId, show it (for backward compatibility)
+    if (!event.calendarId) return true
+    // Only show events from selected calendars
+    return selectedCalendarIds.includes(event.calendarId)
+  })
+
   const value = {
-    events,
+    events: filteredEvents,
+    calendars,
+    selectedCalendarIds,
     loading,
     error,
     isAuthenticated,
     fetchEvents,
+    fetchCalendars,
+    toggleCalendar,
     createEvent,
     updateEvent,
     deleteEvent,

@@ -32,11 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     try {
       // Fetch events from Google Calendar
-      const { timeMin, timeMax } = req.query
+      const { timeMin, timeMax, calendarIds } = req.query
 
       if (!timeMin || !timeMax) {
         return res.status(400).json({ error: 'timeMin and timeMax are required' })
       }
+
+      // Parse calendar IDs (comma-separated)
+      const requestedCalendarIds = calendarIds 
+        ? (calendarIds as string).split(',').filter(Boolean)
+        : []
 
       // Get user's tokens from Supabase
       if (!userId) {
@@ -111,34 +116,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
 
-      // Fetch events
-      const response = await calendar.events.list({
-        calendarId: 'primary',
-        timeMin: timeMin as string,
-        timeMax: timeMax as string,
-        maxResults: 2500,
-        singleEvents: true,
-        orderBy: 'startTime',
-      })
+      // Get user's calendars from database
+      const { data: userCalendars } = await supabase
+        .from('calendars')
+        .select('*')
+        .eq('user_id', userId)
 
-      const events = (response.data.items || [])
-        .filter((item): item is NonNullable<typeof item> => item?.id != null)
-        .map((item) => {
-          const start = item.start?.dateTime || item.start?.date || ''
-          const end = item.end?.dateTime || item.end?.date || ''
-          
-          return {
-            id: item.id!,
-            summary: item.summary || 'Untitled Event',
-            description: item.description,
-            start,
-            end,
-            colorId: item.colorId,
-            location: item.location,
-          }
-        })
+      // Determine which calendars to fetch from
+      let calendarsToFetch: Array<{ id: string; googleId: string; color: string; name: string }> = []
+      
+      if (userCalendars && userCalendars.length > 0) {
+        // Filter by requested calendar IDs, or use all if none specified
+        const calendars = requestedCalendarIds.length > 0
+          ? userCalendars.filter(c => requestedCalendarIds.includes(c.id))
+          : userCalendars
 
-      return res.status(200).json({ events })
+        calendarsToFetch = calendars
+          .filter(c => c.google_calendar_id) // Only calendars with Google Calendar IDs
+          .map(c => ({
+            id: c.id,
+            googleId: c.google_calendar_id!,
+            color: c.color,
+            name: c.name,
+          }))
+      }
+
+      // If no calendars found, fall back to primary calendar
+      if (calendarsToFetch.length === 0) {
+        calendarsToFetch = [{
+          id: 'primary',
+          googleId: 'primary',
+          color: '#3b82f6',
+          name: 'Primary',
+        }]
+      }
+
+      // Fetch events from all calendars
+      const allEvents: Array<{
+        id: string
+        summary: string
+        description?: string
+        start: string
+        end: string
+        colorId?: string
+        location?: string
+        calendarId: string
+        color?: string
+      }> = []
+
+      for (const cal of calendarsToFetch) {
+        try {
+          const response = await calendar.events.list({
+            calendarId: cal.googleId,
+            timeMin: timeMin as string,
+            timeMax: timeMax as string,
+            maxResults: 2500,
+            singleEvents: true,
+            orderBy: 'startTime',
+          })
+
+          const calendarEvents = (response.data.items || [])
+            .filter((item): item is NonNullable<typeof item> => item?.id != null)
+            .map((item) => {
+              const start = item.start?.dateTime || item.start?.date || ''
+              const end = item.end?.dateTime || item.end?.date || ''
+              
+              return {
+                id: item.id!,
+                summary: item.summary || 'Untitled Event',
+                description: item.description,
+                start,
+                end,
+                colorId: item.colorId,
+                location: item.location,
+                calendarId: cal.id,
+                color: cal.color,
+              }
+            })
+
+          allEvents.push(...calendarEvents)
+        } catch (err) {
+          console.error(`Error fetching events from calendar ${cal.name}:`, err)
+          // Continue with other calendars even if one fails
+        }
+      }
+
+      // Sort all events by start time
+      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+
+      return res.status(200).json({ events: allEvents })
     } catch (err) {
       console.error('Error fetching events:', err)
       return res.status(500).json({ error: 'Failed to fetch events' })

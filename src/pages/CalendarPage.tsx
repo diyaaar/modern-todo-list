@@ -26,6 +26,7 @@ import { DayModal } from '../components/calendar/DayModal'
 import { EventDetailsModal } from '../components/calendar/EventDetailsModal'
 import { calendarTheme } from '../config/calendarTheme'
 import { WeekView } from '../components/calendar/WeekView'
+import { CalendarSidebar } from '../components/calendar/CalendarSidebar'
 import { getEventsForWeek } from '../utils/calendarUtils'
 
 export function CalendarPage() {
@@ -34,7 +35,8 @@ export function CalendarPage() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar } = useCalendar()
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { events, loading, error, fetchEvents, isAuthenticated, connectGoogleCalendar, fetchCalendars } = useCalendar()
   const { showToast } = useToast()
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
@@ -42,9 +44,10 @@ export function CalendarPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      fetchCalendars()
       fetchEvents(currentDate)
     }
-  }, [currentDate, isAuthenticated, fetchEvents])
+  }, [currentDate, isAuthenticated, fetchEvents, fetchCalendars])
 
   // Handle OAuth callback
   useEffect(() => {
@@ -212,12 +215,16 @@ export function CalendarPage() {
   const isTodayButtonDisabled = isToday(currentDate)
 
   return (
-    <div
-      ref={calendarRef}
-      className="space-y-6"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="flex gap-4">
+      {/* Calendar Sidebar */}
+      <CalendarSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+
+      <div
+        ref={calendarRef}
+        className="flex-1 space-y-6"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
       {/* Calendar Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -538,6 +545,7 @@ export function CalendarPage() {
           event={selectedEvent}
         />
       )}
+      </div>
     </div>
   )
 }

@@ -67,6 +67,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      calendars: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string
+          is_primary: boolean
+          google_calendar_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string
+          is_primary?: boolean
+          google_calendar_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          color?: string
+          is_primary?: boolean
+          google_calendar_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       tasks: {
         Row: {
           id: string
