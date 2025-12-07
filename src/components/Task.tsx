@@ -27,7 +27,7 @@ import { useWorkspaces } from '../contexts/WorkspacesContext'
 import { getSupabaseClient } from '../lib/supabase'
 import { calculateCompletionPercentage } from '../utils/taskUtils'
 import { isPast, isToday } from 'date-fns'
-import { getDeadlineColor, formatDeadline } from '../utils/dateUtils'
+import { getDeadlineColor, formatDeadline, formatCreationDate } from '../utils/dateUtils'
 import { TaskForm } from './TaskForm'
 import { AISuggestionsModal } from './AISuggestionsModal'
 import { TagBadge } from './TagBadge'
@@ -528,6 +528,13 @@ export function Task({ task, depth = 0 }: TaskProps) {
                         />
                       ))}
                     </div>
+                  )}
+
+                  {/* Creation Date */}
+                  {formatCreationDate(task.created_at) && (
+                    <span className="text-text-tertiary text-xs">
+                      {formatCreationDate(task.created_at)}
+                    </span>
                   )}
                 </div>
 

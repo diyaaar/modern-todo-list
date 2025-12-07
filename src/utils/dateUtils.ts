@@ -1,4 +1,4 @@
-import { format, addDays, addWeeks, nextDay, parseISO, isToday, isThisWeek, isPast } from 'date-fns'
+import { format, addDays, addWeeks, nextDay, parseISO, isToday, isThisWeek, isPast, isYesterday, differenceInDays } from 'date-fns'
 import tr from 'date-fns/locale/tr'
 import { enUS } from 'date-fns/locale'
 
@@ -182,5 +182,38 @@ export function combineDateTime(date: Date, time: string | null): string {
     combined.setHours(23, 59, 59, 999) // End of day if no time specified
   }
   return combined.toISOString()
+}
+
+/**
+ * Format creation date with relative time for recent tasks
+ */
+export function formatCreationDate(createdAt: string | null | undefined): string | null {
+  if (!createdAt) return null
+
+  try {
+    const createdDate = parseISO(createdAt)
+    const today = new Date()
+    
+    // Use relative time for recent tasks
+    if (isToday(createdDate)) {
+      return 'Created today'
+    }
+    
+    if (isYesterday(createdDate)) {
+      return 'Created yesterday'
+    }
+    
+    // For tasks created within the last 7 days, show relative days
+    const daysDiff = differenceInDays(today, createdDate)
+    if (daysDiff >= 2 && daysDiff <= 7) {
+      return `Created ${daysDiff} days ago`
+    }
+    
+    // For older tasks, show formatted date
+    return `Created ${format(createdDate, 'MMM d, yyyy', { locale: enUS })}`
+  } catch {
+    // If parsing fails, return null to hide the date
+    return null
+  }
 }
 
